@@ -54,6 +54,9 @@ public class AnnotatedBeanDefinitionReader {
 
 	private ScopeMetadataResolver scopeMetadataResolver = new AnnotationScopeMetadataResolver();
 
+	/**
+	 * 用于判断bean实现需要注册，会根据environment判断
+	 */
 	private ConditionEvaluator conditionEvaluator;
 
 

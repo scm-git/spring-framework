@@ -78,8 +78,28 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 
 	/**
 	 * 默认构造方法：
-	 * 1. 实例化reader属性(AnnotatedBeanDefinitionReader)，并将this传入AnnotatedBeanDefinitionReader(this)， this实现了BeanDefinitionRegistry，
-	 * 2. 实例化scanner属性，
+	 * 1. 实例化reader属性(AnnotatedBeanDefinitionReader)，并将this传入AnnotatedBeanDefinitionReader(this),复制给registry域，
+	 *    reader持有了AnnotationConfigApplicationContext对象，能调用任何this可以调用的方法
+	 *    this的父类GenericApplicationContext实现了BeanDefinitionRegistry，并且实现了registerBeanDefinition()等方法
+	 *    1.1 将this赋值给registry
+	 *    1.2 创建了StandardEnvironment
+	 *    1.3 根据上一步创建的environment初始化conditionEvaluator，用于判断是否需要注册bean
+	 *    1.4 注册spring内置的postProcessor的BeanDefinition(6个)；通过AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry)方法完成;
+	 *        该方法最终会调用beanFactory.registerBeanDefinition(beanName, beanDefinition)完成注册，最后会将beanName->beanDefinition的键值对放入beanFactory的beanDefinitionMap中
+	 *
+	 * 2. 实例化scanner属性，该scanner初始化时默认useDefaultFilters为true，使用默认的filter判断要扫描的class
+	 *    2.1 默认扫描：
+	 *      @Component (@Controller, @Service, @Repository都是其变种, spring默认的方式)
+	 *      @ManagedBean(javax.annotation.ManagedBean) (jsr-250, 如果没有引入包，会自动跳过)
+	 *      @Named(javax.inject.Named) （jsr-330, 如果没有引入包，会自多个跳过）
+	 *    2.2 会根据registry获取environment
+	 *    2.3 初始化resourcePatternResolver(ResourceLoader), this的父类的ResourceLoader，因此scanner的
+	 *    2.4 初始化beanNameGenerator=new AnnotationBeanNameGenerator()，用于生成bean名称
+	 *    2.5 scan的父类ClassPathScanningCandidateComponentProvider会初始化
+	 *    	  resourcePatternResolver = this,
+	 *    	  metadataReaderFactory = new CachingMetadataReaderFactory(resourceLoader)
+	 *    	  // 5.0新增
+	 *    	  componentsIndex = CandidateComponentsIndexLoader.loadIndex(this.resourcePatternResolver.getClassLoader())
 	 *
 	 * Create a new AnnotationConfigApplicationContext that needs to be populated
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
@@ -110,13 +130,14 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * 	   org.springframework.context.support.GenericApplicationContext
 	 * 	   -- 该类中初始化了DefaultListableBeanFactory，并赋值在beanFactory属性上，最重要的一个属性，所有的类定义信息全部保存在该对象中
 	 * 	   -- 该beanFactory中包括registerBeanDefinition等一系列重要的BeanDefinition注册方法等
+	 * 	   -- 该类实现了BeanDefinitionRegistry, 实现了registerBeanDefinition/removeBeanDefinition等重要方法，这些方法的实现都是通过调用beanFactory实现的
 	 *       org.springframework.context.annotation.AnnotationConfigApplicationContext
 	 *
 	 * 注解式配置的启动类，该构造方法会调用默认的构造AnnotationConfigApplicationContext()，默认构造方法中会初始化很多变量，详情见默认构造方法，包括以下三个步骤"
 	 * 1. this(): 调用默认构造方法，该构造方法会初始化很多变量，
 	 *    1. 包括最重要的DefaultListableBeanFactory; DefaultListableBeanFactory是在其父类(GenericApplicationContext)的构造方法中创建的，父类还引用了类加载器，是一个AppClassLoader
 	 *    2. reader：用于注册引用中的beanDefinition， 调用该方法时，会首先注册spring内嵌的beanDefinition(6个)，在AnnotationConfigUtils.registerAnnotationConfigProcessors
-	 *    3. scanner：
+	 *    3. scanner：包扫描器
 	 * 2. register(): 注册spring内部的beanDefinition
 	 * 	  	注册配置类，该方法最终会调用
 	 * 		reader.register -->
@@ -135,6 +156,10 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
 		this();
+		// 注册componentClass, 调用reader.registry方法，reader已经在this()中初始化
+		// 调用AnnotatedBeanDefinitionReader构造方法初始化reader时已经注入了6个内置的beanDefinition,
+		// 那6个beanDefinition是在构造器中调用AnnotationConfigUtils.registerAnnotationConfigProcessors方法注入的
+		// 此处是调用reader.registry方法，registry方法中会判断条件，是否需要跳过
 		register(componentClasses);
 		refresh();
 	}
@@ -198,6 +223,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	//---------------------------------------------------------------------
 
 	/**
+	 * 调用reader的register方法
+	 *
 	 * Register one or more component classes to be processed.
 	 * <p>Note that {@link #refresh()} must be called in order for the context
 	 * to fully process the new classes.

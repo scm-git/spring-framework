@@ -45,6 +45,10 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	/** Logger available to subclasses. */
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * bean别名和实际名称的对应关系, alias -> name
+	 * 最常用的DefaultListableBeanFactory是该类的子类
+	 */
 	/** Map from alias to canonical name. */
 	private final Map<String, String> aliasMap = new ConcurrentHashMap<>(16);
 
