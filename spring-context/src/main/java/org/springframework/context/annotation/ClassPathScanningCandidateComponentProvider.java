@@ -94,16 +94,37 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 
 	private String resourcePattern = DEFAULT_RESOURCE_PATTERN;
 
+	/**
+	 * 扫描包时会根据这两个filter进行匹配，如果满足条件就注册为BeanDefinition，放入beanFactory的beanDefinitionMap中
+	 * includeFilters：AnnotationConfigApplicationContext默认就是使用的这个过滤列表，默认是过滤如下三种class:
+	 * 	1. 有@Component注解的(@Controller, @Service, @Repository都是其变种)
+	 * 	2. 有@ManagedBean注解的, jsr-250
+	 * 	3. 有@Named(java.inject.Named)注解的, jsr-330
+	 *
+	 * 另外满足了includeFilter之后，还需要继续判断conditionEvaluator，conditionEvaluator根据@Conditional注解来觉得是否满足条件注册BeanDefinition
+	 */
 	private final List<TypeFilter> includeFilters = new LinkedList<>();
 
+	/**
+	 * 包扫描时需要排除的类：默认为空，因此可以自己添加注解，并添加到该列表中，scanner扫描时就会忽略这些类
+	 * 如果满足excludeFilters，直接忽略
+	 */
 	private final List<TypeFilter> excludeFilters = new LinkedList<>();
 
 	@Nullable
 	private Environment environment;
 
+	/**
+	 * 条件判断
+	 * 注册BeanDefinition时，如果有@Conditional注解，就需要经过该组件来判断，是否满足条件，满足时才注册，不满足就跳过
+	 */
 	@Nullable
 	private ConditionEvaluator conditionEvaluator;
 
+	/**
+	 * 扫描包中的组件时，需要用到该路径解析器
+	 * 用来获取包路径下的.class文件, 通过resourcePatternResolver.getResource()获取
+	 */
 	@Nullable
 	private ResourcePatternResolver resourcePatternResolver;
 
@@ -413,6 +434,14 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		return candidates;
 	}
 
+	/**
+	 * resolveBasePackage(basePackage)将包解析为目录格式：目标路径packageSearchPath类似：classpath:a/b/c/**\*.class (最后一个\应该为/，会导致注释失效，所以此处改为反斜杠代替)
+	 * 获取路径解析器resourcePatternResolver， 该属性在创建AnnotationConfigApplication时就创建了，在初始化scanner时赋值的，就是AnnotationConfigApplication对象，因为AnnotationConfigApplication继承了ResourceLoader
+	 *
+	 * 扫描包下的.class文件，
+	 * @param basePackage
+	 * @return
+	 */
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {

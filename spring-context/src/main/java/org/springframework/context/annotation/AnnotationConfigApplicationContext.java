@@ -155,12 +155,15 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+		// 调用默认构造， 具体逻辑详见构造方法，初始化了很多重要的属性
 		this();
 		// 注册componentClass, 调用reader.registry方法，reader已经在this()中初始化
 		// 调用AnnotatedBeanDefinitionReader构造方法初始化reader时已经注入了6个内置的beanDefinition,
 		// 那6个beanDefinition是在构造器中调用AnnotationConfigUtils.registerAnnotationConfigProcessors方法注入的
 		// 此处是调用reader.registry方法，registry方法中会判断条件，是否需要跳过
 		register(componentClasses);
+
+		// 调用父类AbstractApplicationContext的refresh()方法
 		refresh();
 	}
 
@@ -173,6 +176,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	public AnnotationConfigApplicationContext(String... basePackages) {
 		this();
 		scan(basePackages);
+		// 调用父类AbstractApplicationContext的refresh()方法
 		refresh();
 	}
 
@@ -224,6 +228,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 
 	/**
 	 * 调用reader的register方法
+	 * readery.registry方法中会根据@Conditional注解判断是否需要跳过bean注册，必须要有@Conditional注解才会判断是否跳过
 	 *
 	 * Register one or more component classes to be processed.
 	 * <p>Note that {@link #refresh()} must be called in order for the context

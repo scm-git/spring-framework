@@ -249,6 +249,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @return number of beans registered
 	 */
 	public int scan(String... basePackages) {
+		// 就是取beanDefinitionMap.size()
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
 		doScan(basePackages);
@@ -262,6 +263,8 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	}
 
 	/**
+	 * 真正扫描的方法， for循环basePackages
+	 *
 	 * Perform a scan within the specified base packages,
 	 * returning the registered bean definitions.
 	 * <p>This method does <i>not</i> register an annotation config processor
