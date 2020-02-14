@@ -27,6 +27,24 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * 实现的接口：
+ * 	Closeable,
+ * 	AutoCloseable,
+ * 	BeanFactory,
+ * 	HierarchicalBeanFactory,
+ * 	ListableBeanFactory,
+ * 	BeanDefinitionRegistry,
+ * 	AnnotationConfigRegistry,
+ * 	ApplicationContext,
+ * 	ApplicationEventPublisher,
+ * 	ConfigurableApplicationContext,
+ * 	Lifecycle,
+ * 	MessageSource,
+ * 	AliasRegistry,
+ * 	EnvironmentCapable,
+ *  ResourceLoader,
+ * 	ResourcePatternResolver
+ *
  * Standalone application context, accepting <em>component classes</em> as input &mdash;
  * in particular {@link Configuration @Configuration}-annotated classes, but also plain
  * {@link org.springframework.stereotype.Component @Component} types and JSR-330 compliant
@@ -59,11 +77,17 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 
 
 	/**
+	 * 默认构造方法：
+	 * 1. 实例化reader属性(AnnotatedBeanDefinitionReader)，并将this传入AnnotatedBeanDefinitionReader(this)， this实现了BeanDefinitionRegistry，
+	 * 2. 实例化scanner属性，
+	 *
 	 * Create a new AnnotationConfigApplicationContext that needs to be populated
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigApplicationContext() {
+		// 将this传入构造方法中，reader中引用了该registry(BeanDefinitionRegistry), 所以也就持有了beanFactory
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+		// 将this传入构造方法中，scanner中引用了该registry(BeanDefinitionRegistry), 所以也能获取到beanFactory
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -78,6 +102,32 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	}
 
 	/**
+	 * 该类的继承关系：
+	 * org.springframework.core.io.DefaultResourceLoader
+	 * -- 该类中引用了classLoader，根据this对象的类加载器获取默认的类加载器
+	 * 	 org.springframework.context.support.AbstractApplicationContext
+	 * 	 -- 该类的默认构造方法中，会创建resourcePatternResolver=new ResourcePatternResolver()实例，(后续补充该类的作用 TODO)
+	 * 	   org.springframework.context.support.GenericApplicationContext
+	 * 	   -- 该类中初始化了DefaultListableBeanFactory，并赋值在beanFactory属性上，最重要的一个属性，所有的类定义信息全部保存在该对象中
+	 * 	   -- 该beanFactory中包括registerBeanDefinition等一系列重要的BeanDefinition注册方法等
+	 *       org.springframework.context.annotation.AnnotationConfigApplicationContext
+	 *
+	 * 注解式配置的启动类，该构造方法会调用默认的构造AnnotationConfigApplicationContext()，默认构造方法中会初始化很多变量，详情见默认构造方法，包括以下三个步骤"
+	 * 1. this(): 调用默认构造方法，该构造方法会初始化很多变量，
+	 *    1. 包括最重要的DefaultListableBeanFactory; DefaultListableBeanFactory是在其父类(GenericApplicationContext)的构造方法中创建的，父类还引用了类加载器，是一个AppClassLoader
+	 *    2. reader：用于注册引用中的beanDefinition， 调用该方法时，会首先注册spring内嵌的beanDefinition(6个)，在AnnotationConfigUtils.registerAnnotationConfigProcessors
+	 *    3. scanner：
+	 * 2. register(): 注册spring内部的beanDefinition
+	 * 	  	注册配置类，该方法最终会调用
+	 * 		reader.register -->
+	 * 		然后调用registry.register -->
+	 * 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry) -->
+	 * 		registry.registryBean()
+	 * 		最终效果就是在beanFactory的beanDefinitionMap中放入name -> BeanDefinition的键值对
+	 * 		registry就是this, this的父类中引用了beanFactory
+	 * 3. refresh(): 刷新context， 该方法包括12个大的步骤，每个步骤都非常重要，完成spring容器初始化
+	 *
+	 *
 	 * Create a new AnnotationConfigApplicationContext, deriving bean definitions
 	 * from the given component classes and automatically refreshing the context.
 	 * @param componentClasses one or more component classes &mdash; for example,
