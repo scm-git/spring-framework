@@ -52,6 +52,50 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 
+	/**
+	 * 处理BeanFactoryPostProcessor, 需要处理两处：
+	 * 一处是通过入参传入的beanFactoryPostProcessors(也就是AbstractApplicationContext中的beanFactoryPostProcessors字段)
+	 * 另一处是通过beanFactory中获取到的，已经注册的BeanDefinitionMap中获取的
+	 *
+	 * 处理逻辑：
+	 * 一. 对入参传入的beanFactoryPostProcessors进行分组：
+	 * 	1. registryProcessors： 将instanceof BeanDefinitionRegistryPostProcessor的 放入registryProcessors中
+	 *     BeanDefinitionRegistryPostProcessor是BeanFactoryPostProcessor的子类，
+	 *     筛选出来是为了做额外的处理：registryProcessor.postProcessBeanDefinitionRegistry(registry)
+	 *     后面从beanFactory中获取的BeanDefinitionRegistryPostProcessor会调用invokeBeanDefinitionRegistryPostProcessors方法，
+	 *     其内部实现也只是在for循环中一次调用registryProcessor.postProcessBeanDefinitionRegistry(registry)
+	 * 	2. regularPostProcessors： 其他的放入regularPostProcessors中
+	 *
+	 * 二. 通过beanFactory获取已注册的BeanDefinitionRegistryPostProcessor进行如下处理：
+	 *  1. 获取属于PriorityOrdered类型的bean，然后排序，并调用invokeBeanDefinitionRegistryPostProcessors方法
+	 *  2. 获取属于Ordered类型的bean且不属于PriorityOrdered的，然后排序，并调用invokeBeanDefinitionRegistryPostProcessors
+	 *  3. 获取不属于前面两种类型的bean，然后排序，并调用invokeBeanDefinitionRegistryPostProcessors
+	 *  将上面三步获取的bean全部放入registryProcessors中， 分步处理就是为了保证优先级，实际都是调用registryProcessor.postProcessBeanDefinitionRegistry(registry)
+	 *  但是第3步中获取时用了while(true)语句，可能是因为处理期间可能增加新的BeanDefinitionRegistryPostProcessor到beanFactory中 TODO
+	 *
+	 * 三. 分别调用：
+	 *    invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
+	 * 	  invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
+	 *    也就是说：对于BeanDefinitionRegistryPostProcessor，需要多一步registryProcessor.postProcessBeanDefinitionRegistry(registry)调用，且需要保证先后顺序
+	 *    然后对所有的BeanFactoryPostProcessor都需要调用postProcessor.postProcessBeanFactory(beanFactory);
+	 *
+	 *    此时已经处理了入参传入的和beanFactory中的BeanDefinitionRegistryPostProcessor，以及入参传入的BeanFactoryPostProcessor
+	 *    还有beanFactory中的BeanFactoryPostProcessor未处理，接下来就需要处理这部分：
+	 *
+	 * 四. 处理beanFactory中的BeanFactoryPostProcessor
+	 *     同样需要对这些beanFactoryPostProcessor进行分批处理，分批逻辑和第二步类似:
+	 *     1. 筛选出PriorityOrdered类型的，然后排序，并调用invokeBeanFactoryPostProcessors
+	 *     2. 筛选出Ordered类型的，然后排序，并调用invokeBeanFactoryPostProcessors
+	 *     3. 筛选出其他的bean，然后排序，并调用invokeBeanFactoryPostProcessors
+	 *     调用invokeBeanFactoryPostProcessors方法最终也就是调用postProcessor.postProcessBeanFactory(beanFactory);
+	 *     对入参传入的BeanFactoryPostProcessor(包括BeanDefinitionRegistryPostProcessor)不需要处理优先级，所以可以直接调用postProcess方法
+	 *
+	 * 五. 清除缓存，因为上述步骤可能会修改属性，比如属性注入，
+	 *    主要清除如下属性：beanFactory.allBeanNamesByType, beanFactory.singletonBeanNamesByType
+	 *
+	 * @param beanFactory
+	 * @param beanFactoryPostProcessors AbstractApplicationContext实例中的<BeanFactoryPostProcessor> beanFactoryPostProcessors属性
+	 */
 	public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
 
@@ -63,10 +107,14 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanFactoryPostProcessor> regularPostProcessors = new ArrayList<>();
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
 
+			// BeanDefinitionRegistryPostProcessor是BeanFactoryPostProcessor子类，将他们分组
+			// 将属于子类BeanDefinitionRegistryPostProcessor的放入registryProcessors列表中
+			// 其他的放入regularPostProcessors列表中
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
 					BeanDefinitionRegistryPostProcessor registryProcessor =
 							(BeanDefinitionRegistryPostProcessor) postProcessor;
+					// 此处是一个很复杂的处理逻辑，后续再深入研究 TODO
 					registryProcessor.postProcessBeanDefinitionRegistry(registry);
 					registryProcessors.add(registryProcessor);
 				}
@@ -81,20 +129,29 @@ final class PostProcessorRegistrationDelegate {
 			// PriorityOrdered, Ordered, and the rest.
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
+			// 第一步：筛选PriorityOrdered类型的bean
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
+					// 添加到当前将要处理的postProcessor
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
+					// 添加到已处理列表
 					processedBeans.add(ppName);
 				}
 			}
+			// 排序
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			registryProcessors.addAll(currentRegistryProcessors);
+			// 调用该方法进入真正的处理逻辑，只传入了本次筛选出的BeanFactoryPostProcessor(实现了PriorityOrdered接口的)
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
+			// 清理，准备处理Ordered类型的
 			currentRegistryProcessors.clear();
 
+			// 第2步：
+			// 处理Ordered类型的，同时需要满足 !processedBeans.contains(ppName)，即第1步未处理该bean,
+			// 因为 PriorityOrdered extends Ordered，所以需要排除掉已处理过的;
 			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
 			postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
@@ -108,6 +165,8 @@ final class PostProcessorRegistrationDelegate {
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			currentRegistryProcessors.clear();
 
+			// 第三步： 处理剩下的其他BeanDefinitionRegistryPostProcessor
+			// 此处使用while (true)，是因为处理过程中，可能增加新的BeanDefinitionRegistryPostProcessor吗？ TODO
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
 			boolean reiterate = true;
 			while (reiterate) {
@@ -129,9 +188,7 @@ final class PostProcessorRegistrationDelegate {
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
-		}
-
-		else {
+		} else {
 			// Invoke factory processors registered with the context instance.
 			invokeBeanFactoryPostProcessors(beanFactoryPostProcessors, beanFactory);
 		}

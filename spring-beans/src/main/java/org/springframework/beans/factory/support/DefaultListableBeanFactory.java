@@ -725,6 +725,19 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	// Implementation of ConfigurableListableBeanFactory interface
 	//---------------------------------------------------------------------
 
+	/**
+	 * 注册可解决的依赖：
+	 * 将 class(dependencyType) -> autowiredValue(Object) 放入resolvableDependency中，
+	 * 放入时需要校验：autowiredValue是否是一个工厂(ObjectFactory)实例，或者是否是一个给定类型(dependencyType)的实例
+	 *
+	 *
+	 * @param dependencyType the dependency type to register. This will typically
+	 * be a base interface such as BeanFactory, with extensions of it resolved
+	 * as well if declared as an autowiring dependency (e.g. ListableBeanFactory),
+	 * as long as the given value actually implements the extended interface.
+	 * @param autowiredValue the corresponding autowired value. This may also be an
+	 * implementation of the {@link org.springframework.beans.factory.ObjectFactory}
+	 */
 	@Override
 	public void registerResolvableDependency(Class<?> dependencyType, @Nullable Object autowiredValue) {
 		Assert.notNull(dependencyType, "Dependency type must not be null");
