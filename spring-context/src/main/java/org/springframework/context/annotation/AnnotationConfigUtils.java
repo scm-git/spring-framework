@@ -138,6 +138,8 @@ public abstract class AnnotationConfigUtils {
 	}
 
 	/**
+	 * 注册spring框架内置的6个BeanDefinition
+	 *
 	 * Register all relevant annotation post processors in the given registry.
 	 * @param registry the registry to operate on
 	 * @param source the configuration source element (already extracted)
@@ -230,10 +232,20 @@ public abstract class AnnotationConfigUtils {
 		}
 	}
 
+	/**
+	 * 处理BeanDefinition的普通属性，根据其上的相关注解，比如lazy(是否延迟加载)，dependsOn，role，description，primary赋值给BeanDefinition实例的字段
+	 * @param abd
+	 * @param metadata
+	 */
 	public static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd) {
 		processCommonDefinitionAnnotations(abd, abd.getMetadata());
 	}
 
+	/**
+	 * 处理BeanDefinition的普通属性，根据其上的相关注解，比如lazy(是否延迟加载)，dependsOn，role，description，primary赋值给BeanDefinition实例的字段
+	 * @param abd
+	 * @param metadata
+	 */
 	static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd, AnnotatedTypeMetadata metadata) {
 		AnnotationAttributes lazy = attributesFor(metadata, Lazy.class);
 		if (lazy != null) {
@@ -264,6 +276,21 @@ public abstract class AnnotationConfigUtils {
 		}
 	}
 
+	/**
+	 * 判断bean的代理模式(proxyMode)；
+	 * 1. 如果是NO(即DEFAULT，也就是单例)，直接返回该beanDefinitionHolder， 方法结束
+	 * 2. 否则为代理模式，执行ScopedProxyCreator.createScopedProxy(definition, registry, proxyTargetClass)方法
+	 * 	  该方法中会创建一个新的BeanDefinition实例，并且给新的BeanDefinition实例的propertyValue属性中增加键值对：targetBeanName=scopeTarget.<原始名称>
+	 *    并判断代理模式类型：INTERFACE 还是 TARGET_CLASS:
+	 *	  2.1 TARGET_CLASS: CGLIB(可基于class), attribute字段(一个HashMap实例)put一对属性值AutoProxyUtils.preserveTargetClass=true, 向propertyValue中增加proxyTargetClass=true(默认值，所以代码没有显示调用)
+	 *    2.2 INTERFACE: JDK动态代理(基于接口)，向propertyValue中增加键值对：proxyTargetClass=false
+	 *    返回新创建的BeanDefinitionHolder实例，包含了新创建的BeanDefinition实例
+	 *
+	 * @param metadata
+	 * @param definition
+	 * @param registry
+	 * @return
+	 */
 	static BeanDefinitionHolder applyScopedProxyMode(
 			ScopeMetadata metadata, BeanDefinitionHolder definition, BeanDefinitionRegistry registry) {
 

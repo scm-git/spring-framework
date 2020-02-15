@@ -245,6 +245,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	}
 
 	/**
+	 * 使用已初始化的scanner指定的包，将符合条件的类注册到beanFactory的beanDefinitionMap中
+	 *
 	 * Perform a scan within the specified base packages.
 	 * <p>Note that {@link #refresh()} must be called in order for the context
 	 * to fully process the new classes.

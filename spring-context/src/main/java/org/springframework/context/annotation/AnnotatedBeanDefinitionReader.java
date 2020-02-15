@@ -269,7 +269,7 @@ public class AnnotatedBeanDefinitionReader {
 		// 为bean生成name, 如果指定了name属性就是有指定的，没有就生成一个，通过beanNameGenerator生成，beanNameGenerator已经在reader初始化时完成了初始化
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
-		// 处理BeanDefinition的普通属性，比如lazy(是否延迟加载)，dependsOn，role，description，primary
+		// 处理BeanDefinition的普通属性，根据其上的相关注解，比如lazy(是否延迟加载)，dependsOn，role，description，primary赋值给BeanDefinition实例的字段
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
 
 		// 如果指定了qualifiers，处理qualifiers的属性

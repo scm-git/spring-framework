@@ -331,6 +331,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	public Set<BeanDefinition> findCandidateComponents(String basePackage) {
 		if (this.componentsIndex != null && indexSupportsIncludeFilters()) {
+			// 5.0新增
 			return addCandidateComponentsFromIndex(this.componentsIndex, basePackage);
 		}
 		else {
@@ -438,6 +439,8 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * resolveBasePackage(basePackage)将包解析为目录格式：目标路径packageSearchPath类似：classpath:a/b/c/**\*.class (最后一个\应该为/，会导致注释失效，所以此处改为反斜杠代替)
 	 * 获取路径解析器resourcePatternResolver， 该属性在创建AnnotationConfigApplication时就创建了，在初始化scanner时赋值的，就是AnnotationConfigApplication对象，因为AnnotationConfigApplication继承了ResourceLoader
 	 *
+	 * isCandidateComponent(metadataReader)该方法用于判断class是否满足scanner中定义的includeFilters，或不在excludeFilters
+	 *
 	 * 扫描包下的.class文件，
 	 * @param basePackage
 	 * @return
@@ -457,7 +460,10 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				if (resource.isReadable()) {
 					try {
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+						// isCandidateComponent(metadataReader)
+						// class必须满足不在excludeFilters中，并且在includeFilters中，并且要满足conditionEvaluator(@Conditional)判定的条件
 						if (isCandidateComponent(metadataReader)) {
+							// 满足条件后，创建一个BeanDefinition，此处创建出的beanDefinition实例全部是默认属性，比如lazy=false, scope=DEFAULT(单例)等
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 							sbd.setResource(resource);
 							sbd.setSource(resource);

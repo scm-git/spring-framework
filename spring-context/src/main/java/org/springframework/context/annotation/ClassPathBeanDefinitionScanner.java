@@ -64,6 +64,10 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 	private final BeanDefinitionRegistry registry;
 
+	/**
+	 * 初始化默认的beanDefinitionDefaults， 后处理BeanDefinition时会用到，
+	 * 默认将beanDefinition设置为lazy
+	 */
 	private BeanDefinitionDefaults beanDefinitionDefaults = new BeanDefinitionDefaults();
 
 	@Nullable
@@ -244,6 +248,8 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 
 	/**
+	 * 扫描包，将符合条件的类注册到beanFactory的beanDefinitionMap中
+	 *
 	 * Perform a scan within the specified base packages.
 	 * @param basePackages the packages to check for annotated classes
 	 * @return number of beans registered
@@ -256,6 +262,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 		// Register annotation config processors, if necessary.
 		if (this.includeAnnotationConfig) {
+			// 注册spring框架内置的6个BeanDefinition
 			AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 		}
 
@@ -276,22 +283,34 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
+			// 获取满足注册条件的BeanDefinition
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
+				// 代理模式？？没看懂； 只知道默认为单例  TODO
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
+				// 生成beanName, 指定了name就用指定的，没有生成一个
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+
+				// 后处理BeanDefinition, 给beanDefinition赋值，根据BeanDefinitionDefaults赋值， 不知道原因？？ TODO
 				if (candidate instanceof AbstractBeanDefinition) {
+					// 根据beanDefinitionDefaults对入参beanDefinition的字段进行赋值，包括lazyInit, dependencyCheck(依赖校验), autowireMode(装配模式)以及initMethod/destroyMethod
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
 				if (candidate instanceof AnnotatedBeanDefinition) {
+					// 上一步给BeanDefinition实例初始化了默认值，此处根据类上的注解给BeanDefinition赋予指定的值：lazy, dependsOn等
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+
+				// 校验新注册的bean是否合法：
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
+					// 判断bean的代理模式(proxyMode)，然后返回相应的holder，具体参加该方法注释
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+
+					// 最终调用beanFactory.registerBeanDefinition方法将beanDefinition放入map中
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}
@@ -300,6 +319,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	}
 
 	/**
+	 * 根据beanDefinitionDefaults对入参beanDefinition的字段进行赋值，包括lazyInit, dependencyCheck(依赖校验), autowireMode(装配模式)以及initMethod/destroyMethod
 	 * Apply further settings to the given bean definition,
 	 * beyond the contents retrieved from scanning the component class.
 	 * @param beanDefinition the scanned bean definition
@@ -325,6 +345,9 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 
 	/**
+	 * 1. 首先校验beanFactory中是否存在该beanName，beanDefinitionMap.contains(beanName), 如果不存在，则直接判定为true
+	 * 2. 如果已经存在，继续判断是否兼容，兼容的判断逻辑需要继续查看isCompatible代码
+	 *
 	 * Check the given candidate's bean name, determining whether the corresponding
 	 * bean definition needs to be registered or conflicts with an existing definition.
 	 * @param beanName the suggested name for the bean

@@ -537,6 +537,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Initialize message source for this context.
 				initMessageSource();
 
+				// 初始化事件广播器
 				// Initialize event multicaster for this context.
 				initApplicationEventMulticaster();
 
@@ -756,6 +757,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 初始化事件广播器
+	 * 1. 如果容器中已经存在了名字为applicationEventMulticaster的事件广播器实例，则不用重新创建
+	 * 2. 如果容器中没有，则new SimpleApplicationEventMulticaster并赋值给applicationEventMulticaster属性，这种方式创建的applicationEventMulticaster没有被spring容器管理,
+	 *
+	 * 广播事件时会判断executor，如果不为空，则使用异步方式发生(多线程), 如果为空，则直接使用同步的方式发送事件，因此如果使用的第2中方式，则不会使用异步方式，因new的时候没有初始化executor
+	 * 如果想要使用异步的方式发送事件，则需要使用第一种方式，在容器中创建一个applicationEventMulticaster，并为其设置executor属性
+	 *
 	 * Initialize the ApplicationEventMulticaster.
 	 * Uses SimpleApplicationEventMulticaster if none defined in the context.
 	 * @see org.springframework.context.event.SimpleApplicationEventMulticaster

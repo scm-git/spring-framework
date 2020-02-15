@@ -4,10 +4,12 @@ package com.guoweizu.study;
 import com.test.Bar2Service;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 public class IocStudyStartup {
 
-	@Bean
 	public Object bean1() {
 		return  new Object();
 	}

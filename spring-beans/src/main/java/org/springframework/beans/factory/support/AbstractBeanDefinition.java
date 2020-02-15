@@ -360,6 +360,12 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
+	 * 根据beanDefinitionDefaults对入参beanDefinition的字段进行赋值：
+	 * 包括lazyInit(懒加载),
+	 * dependencyCheck(依赖校验),
+	 * autowireMode(装配模式)
+	 * initMethod及destroyMethod
+	 *
 	 * Apply the provided default values to this bean.
 	 * @param defaults the default settings to apply
 	 * @since 2.5
