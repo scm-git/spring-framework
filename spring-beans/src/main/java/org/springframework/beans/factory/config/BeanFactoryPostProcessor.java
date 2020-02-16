@@ -59,6 +59,11 @@ import org.springframework.beans.BeansException;
  * @see BeanPostProcessor
  * @see PropertyResourceConfigurer
  */
+
+/**
+ * 实现该接口的方法会在加载BeanDefinition之后执行postProcessBeanFactory方法
+ * 也就是加载bean定义之后，且实例化bean之前执行
+ */
 @FunctionalInterface
 public interface BeanFactoryPostProcessor {
 

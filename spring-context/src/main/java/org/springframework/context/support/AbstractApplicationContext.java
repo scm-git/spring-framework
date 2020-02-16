@@ -224,7 +224,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	@Nullable
 	private Set<ApplicationListener<?>> earlyApplicationListeners;
 
-	/** ApplicationEvents published before the multicaster setup. */
+	/**
+	 * 因为初始化广播器和监听器分别在第8步和第10步，所以在之前的步骤中也可能产生事件
+	 * 初始化好监听器之前的事件放入这个列表中，防止之前的事件丢失，
+	 * 等广播器和事件监听器都就绪后，再将这个列表中的事件全部广播出去
+	 *
+	 * ApplicationEvents published before the multicaster setup.
+	 */
 	@Nullable
 	private Set<ApplicationEvent> earlyApplicationEvents;
 
@@ -560,6 +566,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				postProcessBeanFactory(beanFactory);
 
 				/**
+				 * 最最最重要的步骤：加载应用中的BeanDefinition到beanFactory.beanDefinitionMap中：
 				 * 调用beanFactoryPostProcessors，需要按优先级分别调用，
 				 * 且需要区分BeanDefinitionRegistryPostProcessor和普通的BeanFactoryPostProcessor
 				 * 非常复杂的一个方法，具体逻辑看该方法内部的注释
@@ -568,7 +575,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				/**
-				 * 调用第3、4步添加的BeanPostProcessor
+				 *
 				 */
 				// 6. Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
@@ -582,6 +589,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// 8. Initialize event multicaster for this context.
 				initApplicationEventMulticaster();
 
+				/**
+				 * springboot 用于启动tomcat
+				 */
 				// 9. Initialize other special beans in specific context subclasses.
 				onRefresh();
 
@@ -853,6 +863,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 *
 	 * 广播事件时会判断executor，如果不为空，则使用异步方式发生(多线程), 如果为空，则直接使用同步的方式发送事件，因此如果使用的第2中方式，则不会使用异步方式，因new的时候没有初始化executor
 	 * 如果想要使用异步的方式发送事件，则需要使用第一种方式，在容器中创建一个applicationEventMulticaster，并为其设置executor属性
+	 * 在refresh()的第五步会加载所有的BeanDefinition, 所以程序中可以自己注册一个bean,在第五步会扫描到，从而在这里就会走if的代码逻辑，使用你自己的bean，并且这个bean会被spring容器管理
 	 *
 	 * Initialize the ApplicationEventMulticaster.
 	 * Uses SimpleApplicationEventMulticaster if none defined in the context.

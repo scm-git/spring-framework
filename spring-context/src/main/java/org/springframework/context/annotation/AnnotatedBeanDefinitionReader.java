@@ -296,7 +296,7 @@ public class AnnotatedBeanDefinitionReader {
 
 		// 构建holder，应该就是为了适合api
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
-		// 此处没看明白，TODO
+		// 判断bean的代理模式
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 
 		// 注册BeanDefinition， 将beanDefinition放入this的beanFactory的beanDefinitionMap中：beanName -> beanDefinition

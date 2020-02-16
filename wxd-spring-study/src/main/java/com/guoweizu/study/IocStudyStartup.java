@@ -4,18 +4,18 @@ package com.guoweizu.study;
 import com.test.Bar2Service;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Configuration;
 
+@Configuration
 public class IocStudyStartup {
 
+	@Bean
 	public Object bean1() {
 		return  new Object();
 	}
 
 	public static void main(String[] args) {
-		AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(IocStudyStartup.class);
+		AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(IocStudyConfig.class);
 		Object bean1 = annotationConfigApplicationContext.getBean("bean1");
 		Object bean2 = annotationConfigApplicationContext.getBean("bean1");
 
