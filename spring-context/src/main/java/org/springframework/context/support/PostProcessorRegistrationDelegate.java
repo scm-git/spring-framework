@@ -98,8 +98,8 @@ final class PostProcessorRegistrationDelegate {
 	 * 另一个是private的，用于处理非BeanDefinitionRegistryPostProcessor的BeanFactoryPostProcessor
 	 *
 	 * 总结一下：
-	 * 1. 容器中可能有很多执行BeanDefinitionRegistryPostProcessor，将这些类型的bean按优先级分组，然后每个组分别排序，再执行postProcessBeanDefinitionRegistry方法
-	 * 执行完成就已经加载了应用程序中的BeanDefinition，然后执行继承自父类BeanFactoryPostProcessor的postProcessBeanFactory方法(这部分没有优先级)
+	 * 1. 容器中可能有很多BeanDefinitionRegistryPostProcessor，将这些类型的bean按优先级分组，然后每个组分别排序，再执行postProcessBeanDefinitionRegistry方法
+	 *    执行完成就已经加载了应用程序中的BeanDefinition，然后执行继承自父类BeanFactoryPostProcessor的postProcessBeanFactory方法(这部分没有优先级)
 	 * 2. 再分组排序执行只实现了BeanFactoryPostProcessor接口的类的postProcessBeanFactory
 	 * 3. 优先级只对spring容器管理的postProcessor起作用，对外部直接传入的（入参传入的）不生效
 	 *
@@ -142,6 +142,7 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
 			// 第1步：筛选PriorityOrdered类型的bean
+			// 此时至少能获取到一个ConfigureClassPostProcessor(是BeanDefinitionRegistryPostProcessor的子类), 它是在初始化reader时创建的6个内置BeanDefinition中的一个
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);

@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Import;
  * @Configuration注解的类会被解析为一个ConfigurationClass对象
  *
  */
+
 @Configuration
-@ComponentScan(basePackages = "com.guoweizu")
 public class IocStudyConfig {
 }

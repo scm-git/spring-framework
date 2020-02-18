@@ -162,6 +162,12 @@ class ConfigurationClassParser {
 	}
 
 
+	/**
+	 * 根据不同的类型调用不同的parse()方法，
+	 * 将@Configuration注解及其类 解析为ConfigurationClass实例
+	 * 最终都调用processConfigurationClass方法
+	 * @param configCandidates
+	 */
 	public void parse(Set<BeanDefinitionHolder> configCandidates) {
 		for (BeanDefinitionHolder holder : configCandidates) {
 			BeanDefinition bd = holder.getBeanDefinition();
@@ -217,11 +223,18 @@ class ConfigurationClassParser {
 	}
 
 
+	/**
+	 * 1. 根据@Conditional指定的条件，是否要跳过这个configClass(即 解析@Configuration得到的ConfigurationClass实例)
+	 *
+	 * @param configClass
+	 * @throws IOException
+	 */
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
 
+		// 这段if块没看懂是什么意思 ？？ TODO
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
 		if (existingClass != null) {
 			if (configClass.isImported()) {
@@ -239,6 +252,9 @@ class ConfigurationClassParser {
 			}
 		}
 
+		// 递归解析@Configuration注解的类及其父类，
+		// 返回值sourceClass就是@Configuration注解所在的类，后面需要扫描这个类上其他注解：
+		// 包括 @PropertySource, @ComponentScan,  @Import, @ImportResource, @Bean
 		// Recursively process the configuration class and its superclass hierarchy.
 		SourceClass sourceClass = asSourceClass(configClass);
 		do {
@@ -262,6 +278,7 @@ class ConfigurationClassParser {
 			throws IOException {
 
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
+			// 处理成员内部类
 			// Recursively process any member (nested) classes first
 			processMemberClasses(configClass, sourceClass);
 		}
@@ -341,13 +358,20 @@ class ConfigurationClassParser {
 	}
 
 	/**
+	 * 1. 先获取成员内部类
+	 * 2. 再调用
+	 *
 	 * Register member (nested) classes that happen to be configuration classes themselves.
 	 */
 	private void processMemberClasses(ConfigurationClass configClass, SourceClass sourceClass) throws IOException {
+		// 获取内部类
 		Collection<SourceClass> memberClasses = sourceClass.getMemberClasses();
 		if (!memberClasses.isEmpty()) {
 			List<SourceClass> candidates = new ArrayList<>(memberClasses.size());
 			for (SourceClass memberClass : memberClasses) {
+				// 逐个判断内部类是否需要解析处理：
+				// 1. 查看class上是否有如下几种注解： @Component, @ComponentScan, @Import, @ImportResource
+				// 2. 查看是否有@Bean注解的method
 				if (ConfigurationClassUtils.isConfigurationCandidate(memberClass.getMetadata()) &&
 						!memberClass.getMetadata().getClassName().equals(configClass.getMetadata().getClassName())) {
 					candidates.add(memberClass);
@@ -361,6 +385,7 @@ class ConfigurationClassParser {
 				else {
 					this.importStack.push(configClass);
 					try {
+						// 返回去调用处理方法
 						processConfigurationClass(candidate.asConfigClass(configClass));
 					}
 					finally {
@@ -949,6 +974,14 @@ class ConfigurationClassParser {
 			return new ConfigurationClass((MetadataReader) this.source, importedBy);
 		}
 
+		/**
+		 * 获取该类的成员内部类
+		 * 1. 通过反射获取正常的成员内部类
+		 * 2. 通过MetadataReader获取ASM注入的内部类，但是不知道原理 TODO
+		 *
+		 * @return
+		 * @throws IOException
+		 */
 		public Collection<SourceClass> getMemberClasses() throws IOException {
 			Object sourceToProcess = this.source;
 			if (sourceToProcess instanceof Class) {
@@ -968,6 +1001,10 @@ class ConfigurationClassParser {
 				}
 			}
 
+			/**
+			 * ASM a very small and fast Java bytecode manipulation framework。
+			 * ASM是一个JAVA字节码分析、创建和修改的开源应用框架。它可以动态生成二进制格式的stub类或其他代理类，或者在类被JAVA虚拟机装入内存之前，动态修改类
+			 */
 			// ASM-based resolution - safe for non-resolvable classes as well
 			MetadataReader sourceReader = (MetadataReader) sourceToProcess;
 			String[] memberClassNames = sourceReader.getClassMetadata().getMemberClassNames();

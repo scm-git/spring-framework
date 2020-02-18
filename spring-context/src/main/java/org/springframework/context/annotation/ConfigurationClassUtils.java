@@ -74,6 +74,15 @@ abstract class ConfigurationClassUtils {
 
 
 	/**
+	 * 1. 如果beanDefinition属于AnnotatedBeanDefinition，取出metadata，
+	 * 2. 如果beanDefinition属于AbstractBeanDefinition,
+	 *    并且不是BeanFactoryPostProcessor/BeanPostProcessor/AopInfrastructureBean/EventListenerFactory这几种类型或其子类型，取出metadata，
+	 * 3. 不属于上面两类，尝试获取annotation的metadata，如果能获取到，则满足条件
+	 *
+	 * 如果有beanDefinition满足上面任意一条，则继续校验上一步读取的metadata是否有@Configuration注解，如果有该注解，说明需要解析
+	 * 并且向其attribute(一个map)属性中放入CONFIGURATION_CLASS_ATTRIBUTE -> full/lite键值对；
+	 * 前面有代码根据这个属性值判断beanDefinition是否已经被处理过
+	 *
 	 * Check whether the given bean definition is a candidate for a configuration class
 	 * (or a nested component class declared within a configuration/component class,
 	 * to be auto-registered as well), and mark it accordingly.
@@ -121,6 +130,9 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
+		// 此处获取@Configuration注解，
+		// 下面的if会判断会过滤掉没有@Configuration注解的beanDefinition, 也就是说必须要添加@Configuration注解才会被放入待解析列表中，否则直接返回false
+		// 如果有@Configuration注解，则根据proxyBeanMethods的值设置CONFIGURATION_CLASS_ATTRIBUTE为full/lite; 前后会根据这个属性判断beanDefinition是否扫描(处理)过
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
@@ -132,6 +144,7 @@ abstract class ConfigurationClassUtils {
 			return false;
 		}
 
+		// 设置order
 		// It's a full or lite configuration candidate... Let's determine the order value, if any.
 		Integer order = getOrder(metadata);
 		if (order != null) {
@@ -142,6 +155,10 @@ abstract class ConfigurationClassUtils {
 	}
 
 	/**
+	 * 判断是否是一个需要处理的配置类：
+	 * 1. 查看class上是否有如下几种注解： @Component, @ComponentScan, @Import, @ImportResource
+	 * 2. 查看是否有@Bean注解的method
+	 *
 	 * Check the given metadata for a configuration class candidate
 	 * (or nested component class declared within a configuration/component class).
 	 * @param metadata the metadata of the annotated class

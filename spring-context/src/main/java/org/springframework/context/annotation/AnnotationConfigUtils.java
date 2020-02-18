@@ -138,7 +138,13 @@ public abstract class AnnotationConfigUtils {
 	}
 
 	/**
-	 * 注册spring框架内置的6个BeanDefinition
+	 * 注册spring框架内置的6个BeanDefinition: 通过RootBeanDefinition类型注册
+	 * ConfigurationClassPostProcessor: 扫描并加载应用中的组件(@Component)
+	 * AutowiredAnnotationBeanPostProcessor
+	 * CommonAnnotationBeanPostProcessor (check JSR-250 support)
+	 * PersistenceAnnotationBeanPostProcessor (check JPA support)
+	 * EventListenerMethodProcessor
+	 * DefaultEventListenerFactory
 	 *
 	 * Register all relevant annotation post processors in the given registry.
 	 * @param registry the registry to operate on

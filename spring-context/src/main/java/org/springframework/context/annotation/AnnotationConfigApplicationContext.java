@@ -86,6 +86,12 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 *    1.3 根据上一步创建的environment初始化conditionEvaluator，用于判断是否需要注册bean
 	 *    1.4 注册spring内置的postProcessor的BeanDefinition(6个)；通过AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry)方法完成;
 	 *        该方法最终会调用beanFactory.registerBeanDefinition(beanName, beanDefinition)完成注册，最后会将beanName->beanDefinition的键值对放入beanFactory的beanDefinitionMap中
+	 *        ConfigurationClassPostProcessor:
+	 * 		  AutowiredAnnotationBeanPostProcessor
+	 * 	      CommonAnnotationBeanPostProcessor (check JSR-250 support)
+	 * 	  	  PersistenceAnnotationBeanPostProcessor (check JPA support)
+	 * 	 	  EventListenerMethodProcessor
+	 * 	      DefaultEventListenerFactory
 	 *
 	 * 2. 实例化scanner属性，该scanner初始化时默认useDefaultFilters为true，使用默认的filter判断要扫描的class
 	 *    2.1 默认扫描：
