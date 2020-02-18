@@ -73,6 +73,14 @@ class ComponentScanAnnotationParser {
 	}
 
 
+	/**
+	 * 1. 根据@ComponentScan注解的属性值创建一个扫描器：ClassPathBeanDefinitionScanner
+	 * 2. 执行扫描：doScan
+	 *
+	 * @param componentScan
+	 * @param declaringClass
+	 * @return
+	 */
 	public Set<BeanDefinitionHolder> parse(AnnotationAttributes componentScan, final String declaringClass) {
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);

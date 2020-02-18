@@ -116,6 +116,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	@Nullable
 	private Environment environment;
 
+	/**
+	 * 1. 传入ConfigurationClassParser，用于加载@PropertySource指定的配置文件
+	 * 2. 传入
+	 */
 	private ResourceLoader resourceLoader = new DefaultResourceLoader();
 
 	@Nullable
@@ -286,10 +290,11 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
 		// 获取已加载的beanDefinition
 		// spring启动时第一次执行到该方法时：beanFactory中至少有如下几个BeanDefinition:
-		// 1. 初始化reader时放入的6个内置BeanDefinition，其中一个是
+		// 1. 初始化reader时放入的6个内置BeanDefinition
 		// 2. 以及调用register(configureComponent)注入的一个或多个
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
+		// 筛选出需要处理的BeanDefinition(有@Configuration注解的)，放入configCandidates中，后面处理这个configCandidates
 		for (String beanName : candidateNames) {
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			// 校验bean是否已经加载过(处理过)，处理过的bean会往attribute中放入这个键值对ConfigurationClassPostProcessor.configurationClass -> lite/full
@@ -298,8 +303,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
-			// 判断beanDefinition是否需要需要解析：判断逻辑详见方法注释
-			// 有@Configuraion注解的BeanDefinition才会返回true
+			// 判断beanDefinition是否需要需要解析：判断逻辑详见方法注释;
+			// 通常以下两者情况会放入待解析列表：
+			// 1. 有@Configuraion注解的BeanDefinition，且其proxyBeanMethods属性为true(默认为true)
+			// 2. 构造方法中指定的class，且class上有@Import/@ImportResource/@ComponentScan/@Component，或者有@Bean注解的方法
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				// 将没有处理的加入configCandidates列表中，后续代码处理这个列表
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
@@ -320,6 +327,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			return Integer.compare(i1, i2);
 		});
 
+		// 这段不是太明白
 		// Detect any custom bean name generation strategy supplied through the enclosing application context
 		SingletonBeanRegistry sbr = null;
 		if (registry instanceof SingletonBeanRegistry) {
@@ -336,7 +344,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			}
 		}
 
-		// 不确定这个environment何时初始化的？ TODO
+		// 不确定这个environment何时初始化的？debug时，这个environment已经有值了 TODO
 		if (this.environment == null) {
 			this.environment = new StandardEnvironment();
 		}
@@ -357,7 +365,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			parser.parse(candidates);
 			parser.validate();
 
+			// 上一步parser.parse方法解析时会将BeanDefinitionHolder对应的beanDefinition解析为ConfigureClass，再继续处理
+			// 处理完成后的ConfigureClass(解析@Configuration注解类得到的对象)放入parser.configurationClasses中
 			Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
+			// 移除已解析的configureClass；第一次进入时肯定不会移除任何
 			configClasses.removeAll(alreadyParsed);
 
 			// Read the model and create bean definitions based on its content
@@ -366,7 +377,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
-			// 此处处理@Import 以及 @Bean注解的类
+
+			// 此处加载@Import 以及 @Bean的BeanDefinition到beanFactory.beanDefinitionMap中
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 

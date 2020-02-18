@@ -79,9 +79,12 @@ abstract class ConfigurationClassUtils {
 	 *    并且不是BeanFactoryPostProcessor/BeanPostProcessor/AopInfrastructureBean/EventListenerFactory这几种类型或其子类型，取出metadata，
 	 * 3. 不属于上面两类，尝试获取annotation的metadata，如果能获取到，则满足条件
 	 *
-	 * 如果有beanDefinition满足上面任意一条，则继续校验上一步读取的metadata是否有@Configuration注解，如果有该注解，说明需要解析
-	 * 并且向其attribute(一个map)属性中放入CONFIGURATION_CLASS_ATTRIBUTE -> full/lite键值对；
+	 * 满足上面三个条件后，继续判断下面两种情况：
+	 * 1. 有@Configuraiton注解，且注解的proxyBeanMethods属性为true(默认为true), 表示是一个配置类，返回true，并且设置CONFIGURATION_CLASS_ATTRIBUTE = full
+	 * 2. 有@Configuration注解或者有@Component, @ComponentScan, @Import, @ImportResource，或者有@Bean注解的方法， 并且设置CONFIGURATION_CLASS_ATTRIBUTE = lite
 	 * 前面有代码根据这个属性值判断beanDefinition是否已经被处理过
+	 *
+	 * 也就是说如果没有@Configuration注解，但是在AnnotationConfigApplicationContext构造方法中自定了某个类，而这个类上面几种注解都会被解析
 	 *
 	 * Check whether the given bean definition is a candidate for a configuration class
 	 * (or a nested component class declared within a configuration/component class,
@@ -130,9 +133,10 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
-		// 此处获取@Configuration注解，
-		// 下面的if会判断会过滤掉没有@Configuration注解的beanDefinition, 也就是说必须要添加@Configuration注解才会被放入待解析列表中，否则直接返回false
-		// 如果有@Configuration注解，则根据proxyBeanMethods的值设置CONFIGURATION_CLASS_ATTRIBUTE为full/lite; 前后会根据这个属性判断beanDefinition是否扫描(处理)过
+		// 判断以下两种情况：
+		// 1. 有@Configuraiton注解，且注解的proxyBeanMethods属性为true(默认为true), 表示是一个配置类，返回true，并且设置CONFIGURATION_CLASS_ATTRIBUTE = full
+		// 2. 有@Configuration注解或者有@Component, @ComponentScan, @Import, @ImportResource，或者有@Bean注解的方法， 并且设置CONFIGURATION_CLASS_ATTRIBUTE = lite
+		// 都不满足就返回false
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);

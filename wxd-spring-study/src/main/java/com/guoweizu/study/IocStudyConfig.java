@@ -1,15 +1,20 @@
 package com.guoweizu.study;
 
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Conditional;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import com.test.Bar2Service;
+import org.springframework.context.annotation.*;
 
 /**
  * @Configuration注解的类会被解析为一个ConfigurationClass对象
  *
  */
 
+@ComponentScan(basePackages = "com.guoweizu")
 @Configuration
+@Import(value = Bar2Service.class)
 public class IocStudyConfig {
+
+
+	public Object bean1() {
+		return  new Object();
+	}
 }

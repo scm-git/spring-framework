@@ -138,12 +138,15 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 
 		if (configClass.isImported()) {
+			// 加载通过@Import注解导入的BeanDefinition
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
+			// 加载通过@Bean注解方法定义的BeanDefinition
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		// 貌似加载外部的定义的BeanDefinition, groovy, xml文件？
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
