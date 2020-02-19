@@ -265,12 +265,28 @@ final class PostProcessorRegistrationDelegate {
 
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
+		/**
+		 * 此时beanFactory中有3-4个BeanPostProcessor，
+		 *  refresh第3步和第5不分别添加进去的，详细点击如下链接：
+		 * {@link org.springframework.beans.factory.support.AbstractBeanFactory#beanPostProcessors }
+		 *
+		 * beanProcessorTargetCount=beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length
+		 * 1. beanFactory.getBeanPostProcessorCount()： 已添加到beanFactory.beanPostProcessors集合中的
+		 * 2. 中间的1表示下一步马上要添加到beanPostProcessors中的BeanPostProcessorChecker
+		 * 3. postProcessorNames.length 表示从beanFactory中获取到的bean，即将在后面添加的(按优先级添加)
+		 */
 		// Register BeanPostProcessorChecker that logs an info message when
 		// a bean is created during BeanPostProcessor instantiation, i.e. when
 		// a bean is not eligible for getting processed by all BeanPostProcessors.
 		int beanProcessorTargetCount = beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length;
 		beanFactory.addBeanPostProcessor(new BeanPostProcessorChecker(beanFactory, beanProcessorTargetCount));
 
+		/**
+		 * 从beanFactory中获取所有的BeanPostProcessor类型的bean
+		 * 对BeanFactoryProcessor根据PriorityOrdered, Ordered及其他三个优先级分组（和BeanFactoryPostProcessor一样）：
+		 * 然后按顺序添加到beanFactory.beanPostProcessors（一个List）中，最后添加spring内置的BeanFactory
+		 * PriorityOrdered > Ordered > 其他 > spring内置
+		 */
 		// Separate between BeanPostProcessors that implement PriorityOrdered,
 		// Ordered, and the rest.
 		List<BeanPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
@@ -357,6 +373,8 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 	/**
+	 * 调用postProcessor.postProcessBeanFactory,
+	 * 干方法会添加一个BeanPostProcessor
 	 * Invoke the given BeanFactoryPostProcessor beans.
 	 */
 	private static void invokeBeanFactoryPostProcessors(

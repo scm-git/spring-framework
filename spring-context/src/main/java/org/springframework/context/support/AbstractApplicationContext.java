@@ -39,6 +39,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.support.ResourceEditorRegistrar;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -575,11 +576,20 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				/**
+				 * 注册bean后置处理器:BeanPostProcessor
+				 * 将第五步扫描到的BeanPostProcessor组件添加到beanFactory.beanPostProcessors列表中(会根据优先级高低排序)
 				 *
+				 * 初始化reader时注册了1-3个BeanPostProcessor：
+				 * 1. AutowiredAnnotationBeanPostProcessor，必定会注册这个BeanPostProcessor，所以此处必定会处理这个
+				 * 2. CommonAnnotationBeanPostProcessor (JSR-250)
+				 * 3.PersistenceAnnotationBeanPostProcessor (JPA)
+				 *
+				 * 点击查看：{@link org.springframework.context.annotation.AnnotationConfigUtils#registerAnnotationConfigProcessors(BeanDefinitionRegistry, Object)}
 				 */
 				// 6. Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
 
+				// 初始化国际化支持的messageSource
 				// 7. Initialize message source for this context.
 				initMessageSource();
 
@@ -591,6 +601,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				/**
 				 * springboot 用于启动tomcat
+				 * 一些WebApplicationContext重新了该方法的，用于设置ThemeSource
 				 */
 				// 9. Initialize other special beans in specific context subclasses.
 				onRefresh();
@@ -735,8 +746,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// 这个东西不知道干嘛的 TODO
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
-		// Configure the bean factory with context callbacks.
 		// 添加ApplicationContextAwareProcessor到beanPostProcessor中(AbstractBeanFactory中的一个List类型的属性)
+		// Configure the bean factory with context callbacks.
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 		// 添加 依赖检查和自动装配时需要忽略的类，不知道具体怎么用的 TODO
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
@@ -761,8 +772,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
 		// 检查是否beanFactory中是否包括名字为loadTimeWeaver的bean，
-		// 如果不包含，添加一个LoadTimeWeaverAwareProcessor到beanPostProcessors(一个List)中
+		// 如果包含，添加一个LoadTimeWeaverAwareProcessor到beanPostProcessors(一个List)中
 		// 并且设置一个tempClassLoader
+		// LoadTimeWeaver用于支持spring加载时织入代码，类似spring-agent；即在加载期间修改代码
 		// Detect a LoadTimeWeaver and prepare for weaving, if found.
 		if (beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
 			beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
@@ -824,11 +836,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 1. 如果用户自己定义了名为messageSource的MessaageSource的bean，那就用用户自己定义的，赋值给messageSource属性，
+	 *    且这是托管在beanFactory中的，通过beanFactory.getBean获取
+	 * 2. 如果没有定义，那就new一个DelegatingMessageSource，赋值给messageSource，通过context.getMessageSource方法获取
+	 *
 	 * Initialize the MessageSource.
 	 * Use parent's if none defined in this context.
 	 */
 	protected void initMessageSource() {
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+		// containsLocalBean, 只查询当前beanFactory，不会查找其父级beanFactory
 		if (beanFactory.containsLocalBean(MESSAGE_SOURCE_BEAN_NAME)) {
 			this.messageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME, MessageSource.class);
 			// Make MessageSource aware of parent MessageSource.

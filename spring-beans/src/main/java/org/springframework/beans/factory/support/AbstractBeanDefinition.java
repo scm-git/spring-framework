@@ -144,6 +144,11 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	@Nullable
 	private String scope = SCOPE_DEFAULT;
 
+	/**
+	 * 是否为abstract的bean,
+	 * abstract的bean不能获取实例；只能作为模板被其他bean继承
+	 * 获取abstract的bean会抛出异常：BeanIsAbstractException
+	 */
 	private boolean abstractFlag = false;
 
 	@Nullable

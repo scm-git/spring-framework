@@ -162,6 +162,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	/** Resolver to use for checking if a bean definition is an autowire candidate. */
 	private AutowireCandidateResolver autowireCandidateResolver = new SimpleAutowireCandidateResolver();
 
+	/**
+	 * refresh第三步prepareBeanFactory时，会添加4个：
+	 * 	BeanFactory.class -> beanFactory
+	 * 	ResourceLoader.class -> applicationContext
+	 * 	ApplicationEventPublisher.class -> applicationContext
+	 * 	ApplicationContext.class -> applicationContext
+	 */
 	/** Map from dependency type to corresponding autowired value. */
 	private final Map<Class<?>, Object> resolvableDependencies = new ConcurrentHashMap<>(16);
 
@@ -868,6 +875,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
+		// for语句块对每一个bean调用getBean()方法，目的是为了触发非懒加载的bean的实例化；
+		// 也就是说，for语句块执行完毕后，之前加载的所有的beanDefinition都会实例化为真正的bean(非懒加载的)
 		// Trigger initialization of all non-lazy singleton beans...
 		for (String beanName : beanNames) {
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
@@ -897,6 +906,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 
+		// 触发bean的SmartInitializingSingleton.afterSingletonsInstantiated()方法
 		// Trigger post-initialization callback for all applicable beans...
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);

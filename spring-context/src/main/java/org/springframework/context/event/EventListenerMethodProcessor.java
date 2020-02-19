@@ -71,6 +71,9 @@ public class EventListenerMethodProcessor
 	@Nullable
 	private ConfigurableListableBeanFactory beanFactory;
 
+	/**
+	 * AbstractApplicationContext.refresh()的第5步会初始化该属性，通过调用postProcessBeanFactory方法
+	 */
 	@Nullable
 	private List<EventListenerFactory> eventListenerFactories;
 
@@ -86,6 +89,10 @@ public class EventListenerMethodProcessor
 		this.applicationContext = (ConfigurableApplicationContext) applicationContext;
 	}
 
+	/**
+	 * 初始化eventListenerFactories，具体功能还不确定
+	 * @param beanFactory the bean factory used by the application context
+	 */
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
