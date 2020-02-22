@@ -59,15 +59,19 @@ public class BeanFactoryAdvisorRetrievalHelper {
 
 
 	/**
+	 * 用来找事务切面
+	 *
 	 * Find all eligible Advisor beans in the current bean factory,
 	 * ignoring FactoryBeans and excluding beans that are currently in creation.
 	 * @return the list of {@link org.springframework.aop.Advisor} beans
 	 * @see #isEligibleBean
 	 */
 	public List<Advisor> findAdvisorBeans() {
+		// 1.查看缓存中是否有Advisor
 		// Determine list of advisor bean names, if not cached already.
 		String[] advisorNames = this.cachedAdvisorBeanNames;
 		if (advisorNames == null) {
+			// 2. 缓存中没有找到，继续查找beanFactory容器中是否有Advisor类型的beanNames， 如果找到就赋值给缓存变量，没找到就直接返回
 			// Do not initialize FactoryBeans here: We need to leave all regular beans
 			// uninitialized to let the auto-proxy creator apply to them!
 			advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(

@@ -47,5 +47,9 @@ public class FooService {
 //	public void setAge(Integer age) {
 //		this.age = age;
 //	}
+
+	public void foo(){
+		System.out.println("FooService.foo()...");
+	}
 }
 

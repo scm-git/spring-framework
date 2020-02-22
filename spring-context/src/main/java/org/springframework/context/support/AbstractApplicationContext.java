@@ -616,6 +616,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				 // 10. Check for listener beans and register them.
 				registerListeners();
 
+				/**
+				 * 完成单例bean的实例化，里面的doCreateBean也是一个及其复杂的方法：此处总结该方法流程:
+				 *
+				 *
+				 */
 				// 11. Instantiate all remaining (non-lazy-init) singletons.
 				finishBeanFactoryInitialization(beanFactory);
 
@@ -988,6 +993,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 					beanFactory.getBean(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class));
 		}
 
+		// 注册value解析器，用于处理bean中的@Value注入
 		// Register a default embedded value resolver if no bean post-processor
 		// (such as a PropertyPlaceholderConfigurer bean) registered any before:
 		// at this point, primarily for resolution in annotation attribute values.
@@ -995,18 +1001,24 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
 		}
 
+		// 初始化LoadTimeWeaverAware, 调用getBean是为了触发该bean的实例化
 		// Initialize LoadTimeWeaverAware beans early to allow for registering their transformers early.
 		String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
 		for (String weaverAwareName : weaverAwareNames) {
 			getBean(weaverAwareName);
 		}
 
+		// 加载完LoadTimeWeaverAware的bean之后，将TempClassLoader设置为null
+		// LoadTimeWeaver和其tempClassLoader在第三步prepareBeanFactory时设置的
 		// Stop using the temporary ClassLoader for type matching.
 		beanFactory.setTempClassLoader(null);
 
+		// 1. 冻结配置：将configurationFrozen设置为true
+		// 2. 获取所有beanDefinition的name
 		// Allow for caching all bean definition metadata, not expecting further changes.
 		beanFactory.freezeConfiguration();
 
+		// 实例化所有非懒加载的单例bean
 		// Instantiate all remaining (non-lazy-init) singletons.
 		beanFactory.preInstantiateSingletons();
 	}

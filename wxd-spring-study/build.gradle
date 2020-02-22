@@ -3,6 +3,11 @@ description = "Spring Sutdy"
 apply plugin: "groovy"
 apply plugin: "kotlin"
 
+tasks.withType(Checkstyle) {
+    exclude '**/com/guoweizu/**'
+    exclude '**/com/test/**'
+}
+
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     compile(project(":spring-aop"))
@@ -10,4 +15,7 @@ dependencies {
     compile(project(":spring-core"))
     compile(project(":spring-expression"))
     compile(project(":spring-context"))
+    compile("org.aspectj:aspectjweaver")
+    compile("org.apache.commons:commons-pool2")
+    compile("com.jamonapi:jamon")
 }

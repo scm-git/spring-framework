@@ -865,6 +865,17 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return (this.configurationFrozen || super.isBeanEligibleForMetadataCaching(beanName));
 	}
 
+	/**
+	 * 1. 迭代beanDefinitionNames，执行getBean(beanName): getBean内部做了太多了事：
+	 *    1.1 判断是否为FactoryBean, 如果是，添加前缀"&"，实例化其factoryBean，而不是实际的bean
+	 *    1.2 如果不是FactoryBean, 直接调用getBean()，实例化bean
+	 *    实例化之后会将其放入单例缓存池中：singletonObjects
+	 *
+	 * 2. 判断是否实现了SmartInitializingSingleton接口，实现了就执行其afterSingletonsInstantiated方法
+	 *    所以此步骤是在bean都已经实例化完成之后再执行
+	 *
+	 * @throws BeansException
+	 */
 	@Override
 	public void preInstantiateSingletons() throws BeansException {
 		if (logger.isTraceEnabled()) {
@@ -880,11 +891,18 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		// Trigger initialization of all non-lazy singleton beans...
 		for (String beanName : beanNames) {
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			// 判断是否需要实例化，满足如下三个条件：
+			// 1. 非abstract
+			// 2. 是单例
+			// 3. 非懒加载
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				// 判断是否是factoryBean，如果是factoryBean，就先实例化其工厂类； 后面获取实际的bean时，会调用工厂类的getObject方法
 				if (isFactoryBean(beanName)) {
+					// 给bean加上工厂类前缀&，获取工厂类本身的bean
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						final FactoryBean<?> factory = (FactoryBean<?>) bean;
+						// 判断是否为饿汉式加载，即非懒加载
 						boolean isEagerInit;
 						if (System.getSecurityManager() != null && factory instanceof SmartFactoryBean) {
 							isEagerInit = AccessController.doPrivileged((PrivilegedAction<Boolean>)
@@ -895,6 +913,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							isEagerInit = (factory instanceof SmartFactoryBean &&
 									((SmartFactoryBean<?>) factory).isEagerInit());
 						}
+						// 如果是饿汉式加载，就调用getBean方法进行实例化
 						if (isEagerInit) {
 							getBean(beanName);
 						}

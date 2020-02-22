@@ -28,6 +28,11 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * 启用AOP时，spring在第五步时会扫描到@Import(AspectJAutoProxyRegistrar.class)，然后会注册这个类型的BeanDefinition， 是一个BeanPostProcessor
+ * org.springframework.aop.config.internalAutoProxyCreator -> AnnotationAwareAspectJAutoProxyCreator， 这个BeanDefinition
+ *
+ *
+ *
  * {@link AspectJAwareAdvisorAutoProxyCreator} subclass that processes all AspectJ
  * annotation aspects in the current application context, as well as Spring Advisors.
  *
@@ -86,6 +91,11 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 	}
 
 
+	/**
+	 * 1. super.findCandidateAdvisors() 先查找Advisor类型的bean，会找到事务的Advisor，不会找到其他的Advisor
+	 * 2. aspectJAdvisorsBuilder.buildAspectJAdvisors() 查找所有的AspectJ aspects，并把所有的切面转为增强器，并添加到advisors集合中
+	 * @return
+	 */
 	@Override
 	protected List<Advisor> findCandidateAdvisors() {
 		// Add all the Spring advisors found according to superclass rules.

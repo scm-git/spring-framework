@@ -60,16 +60,7 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.InjectionPoint;
 import org.springframework.beans.factory.UnsatisfiedDependencyException;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.beans.factory.config.AutowiredPropertyMarker;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.beans.factory.config.ConstructorArgumentValues;
-import org.springframework.beans.factory.config.DependencyDescriptor;
-import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
-import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
-import org.springframework.beans.factory.config.TypedStringValue;
+import org.springframework.beans.factory.config.*;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.NamedThreadLocal;
@@ -470,6 +461,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	//---------------------------------------------------------------------
 
 	/**
+	 * args就是工厂方法的参数，或者构造器的参数
+	 *
 	 * Central method of this class: creates a bean instance,
 	 * populates the bean instance, applies post-processors, etc.
 	 * @see #doCreateBean
@@ -535,6 +528,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * args就是工厂方法的参数，或者构造器的参数
+	 *
 	 * Actually create the specified bean. Pre-creation processing has already happened
 	 * at this point, e.g. checking {@code postProcessBeforeInstantiation} callbacks.
 	 * <p>Differentiates between default bean instantiation, use of a
@@ -570,6 +565,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
+					// 调用MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition后置处理器方法
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -591,7 +587,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			// 添加到早期对象缓存中，解决循环引用问题
+			// 添加到早期对象缓存中，解决循环引用问题,
+			// 这三个缓存的添加和移除时机？？ TODO
+			// singletonObjects： 一级缓存
+			// earlySingletonObjects： 二级缓存
+			// singletonFactories： 三级缓存
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
@@ -1394,6 +1394,26 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		/**
+		 * 此处会调用ImportAwareBeanPostProcessor.setImportMetadata; 因为在refresh的第五步注册了ImportAwareBeanPostProcessor，
+		 * ImportAwareBeanPostProcessor是InstantiationAwareBeanPostProcessor的子类
+		 * 所以，调用postProcessAfterInstantiation方法时，会调用其bean的setImportMetadata()方法
+		 *
+		 * 另外ApplicationContextAware等Aware接口也是类似的方式，但是此处不会调用，关于ApplicationContextAware设置context的说明如下：
+		 * 如果bean实现了ApplicationContextAware接口：
+		 * 1. 在AbstractApplicationContext.refresh()的第三步prepareBeanFactory中，注册了2-3个BeanPostProcessor, 其中一个就是ApplicationContextAwareProcessor，
+		 *    注册这个processor时调用public ApplicationContextAwareProcessor(ConfigurableApplicationContext applicationContext)构造方法
+		 *    其中入参applicationContext就是传入的this，也就是调用者自己
+		 * 2. 如果自己的bean实现了ApplicationContextAware接口，肯定就会实现setApplicationContext(applicationContext)方法；
+		 * 3. 所以此处调用getBeanPostProcessors()时就能获取到这个这个processor，然后执行processor的postProcessAfterInstantiation方法：
+		 * 4. 查看该方法，可以看到：((ApplicationContextAware) bean).setApplicationContext(this.applicationContext);
+		 *    该方法的入参是this.applicationContext,而这个就是在步骤1中传入的this对象；所以此处就注入了应用中的applicationContext到自己的bean中
+		 * 参见：
+		 * {@link org.springframework.context.support.ApplicationContextAwareProcessor}
+		 * {@link org.springframework.context.support.AbstractApplicationContext#prepareBeanFactory(ConfigurableListableBeanFactory)}
+		 * {@link org.springframework.context.ApplicationContextAware}
+		 *
+		 */
 		// Give any InstantiationAwareBeanPostProcessors the opportunity to modify the
 		// state of the bean before properties are set. This can be used, for example,
 		// to support styles of field injection.
@@ -1410,7 +1430,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
+		/**
+		 * 解析装配模式：
+		 *   如果指定的是AUTOWIRE_AUTODETECT(已废弃的)，那么会根据构造方法进行判断
+		 *   如果有无参构造函数存在，那么就是AUTOWIRE_BY_TYPE，否则使用AUTOWIRE_CONSTRUCTOR
+		 * 默认是AUTOWIRE_NO(0)
+		 *
+		 */
 		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
+		/**
+		 * 根据byType或则byName进行属性装配
+		 */
 		if (resolvedAutowireMode == AUTOWIRE_BY_NAME || resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
 			// Add property values based on autowire by name if applicable.
@@ -1456,6 +1486,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			checkDependencies(beanName, mbd, filteredPds, pvs);
 		}
 
+		// 此处就是真正的为属性设置值，即给@Autowired的属性赋值
 		if (pvs != null) {
 			applyPropertyValues(beanName, mbd, bw, pvs);
 		}
@@ -1796,6 +1827,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}, getAccessControlContext());
 		}
 		else {
+
+			// ApplicationContextAware?? TODO
 			invokeAwareMethods(beanName, bean);
 		}
 
@@ -1816,7 +1849,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
 			// 调用所有BeanPostProcessor的postProcessAfterInitialization方法
-			// 动态代理的核心步骤
+			// 动态代理的核心步骤；AOP及事务就是在此步骤创建动态代理对象的
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 

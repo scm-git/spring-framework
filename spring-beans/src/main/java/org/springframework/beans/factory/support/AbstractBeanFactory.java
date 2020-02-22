@@ -44,18 +44,7 @@ import org.springframework.beans.PropertyEditorRegistrySupport;
 import org.springframework.beans.SimpleTypeConverter;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.TypeMismatchException;
-import org.springframework.beans.factory.BeanCreationException;
-import org.springframework.beans.factory.BeanCurrentlyInCreationException;
-import org.springframework.beans.factory.BeanDefinitionStoreException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryUtils;
-import org.springframework.beans.factory.BeanIsAbstractException;
-import org.springframework.beans.factory.BeanIsNotAFactoryException;
-import org.springframework.beans.factory.BeanNotOfRequiredTypeException;
-import org.springframework.beans.factory.CannotLoadBeanClassException;
-import org.springframework.beans.factory.FactoryBean;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.SmartFactoryBean;
+import org.springframework.beans.factory.*;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.BeanExpressionContext;
@@ -241,6 +230,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
+	 * args就是工厂方法的参数，或者构造器的参数
+	 *
 	 * Return an instance, which may be shared or independent, of the specified bean.
 	 * @param name the name of the bean to retrieve
 	 * @param requiredType the required type of the bean to retrieve
@@ -259,7 +250,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		final String beanName = transformedBeanName(name);
 		Object bean;
 
-		// 从单例缓冲池中获取bean，如果能获取到，说明bean已经创建了，直接可以拿到
+		// 从单例缓存池中获取bean，如果能获取到，说明bean已经创建了，直接可以拿到，不走else中的实例化逻辑，直接返回
+		// 第一次进入时，还没有进入创建bean流程，因此会进入else语句块；
+		// else 语句块就是bean的实例化相关逻辑
 		// Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
@@ -283,6 +276,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
+			// 判断父级beanFactory不为空，并且当前beanFactory没有这个bean时，才进入下面这个if语句块
+			// 也就是说，如果当前beanFactory已经包含了，就不会查找父级beanFactory
 			// Check if bean definition exists in this factory.
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
@@ -311,8 +306,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 			try {
 				// 获取合并后的beanDefinition（自己和父级beanDefinition）
+				// 1. 首先会从缓存中获取，
+				// 2. 缓存没有获取到，再去合并父级BeanDefinition和当前BeanDefinition
 				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
-				// 校验是否是一个abstractBean，如果是，直接抛出异常； 不能获取abstract的bean
+				// 校验合并后的beanDefinition是否是一个abstractBean，如果是，直接抛出异常； 不能获取abstract的bean
 				checkMergedBeanDefinition(mbd, beanName, args);
 
 				// 根据@DependsOn注解，先创建@DependsOn中指定的bean
@@ -343,7 +340,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// 分为单例bean和原型bean
 				// Create bean instance.
 				if (mbd.isSingleton()) {
-					// 创建bean,并加入单例缓冲池
+					//
+					/**
+					 * 创建bean,并加入单例缓冲池, 此处的逻辑非常复杂，详见方法上的注释说明
+					 * {@link AbstractAutowireCapableBeanFactory#getSingleton(String, ObjectFactory)}
+					 */
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
 							return createBean(beanName, mbd, args);
