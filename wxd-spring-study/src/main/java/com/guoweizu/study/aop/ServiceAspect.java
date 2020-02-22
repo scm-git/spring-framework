@@ -25,18 +25,18 @@ public class ServiceAspect {
 	 * 示例：
 	 * execution(public * *(..)) // 所有的public方法
 	 * execution(* set*(..))	// set开头的方法
-	 * execution(* com.xyz.service.AccountService.*(..))
-	 * execution(* com.xyz.service.*.*(..))
-	 * execution(* com.xyz.service..*.*(..))
-	 * within(com.xyz.service.*)
-	 * within(com.xyz.service..*)
-	 * this(com.xyz.service.AccountService)
-	 * target(com.xyz.service.AccountService)
-	 * args(java.io.Serializable)
-	 * @target(org.springframework.transaction.annotation.Transactional)
-	 * @within(org.springframework.transaction.annotation.Transactional)
-	 * @annotation(org.springframework.transaction.annotation.Transactional)
-	 * @args(com.xyz.security.Classified)
+	 * execution(* com.xyz.service.AccountService.*(..)) // 所有AccountService中的方法
+	 * execution(* com.xyz.service.*.*(..))	// 所有com.xyz.service包中的方法(不包括子包)
+	 * execution(* com.xyz.service..*.*(..)) // 所有com.xyz.service包及其子包中的方法
+	 * within(com.xyz.service.*)	// 所有com.xyz.service包中的方法(不包括子包)
+	 * within(com.xyz.service..*)	// 所有com.xyz.service包及其子包中的方法
+	 * this(com.xyz.service.AccountService)	// 所有实现了AccountService的proxy
+	 * target(com.xyz.service.AccountService)	// 所有实现了AccountService的proxy, 同this
+	 * args(java.io.Serializable)	// 参数类型为Serializable的方法
+	 * @target(org.springframework.transaction.annotation.Transactional) 	// 有@Transactional注解的方法
+	 * @within(org.springframework.transaction.annotation.Transactional)	// 有@Transactional注解的方法
+	 * @annotation(org.springframework.transaction.annotation.Transactional)	// 有@Transactional注解的方法
+	 * @args(com.xyz.security.Classified)	// 参数带有@Classified注解的方法
 	 * bean(fooService) 名为fooService的spring bean
 	 * bean(*Service)  所有以Service结尾的spring bean
 	 *
