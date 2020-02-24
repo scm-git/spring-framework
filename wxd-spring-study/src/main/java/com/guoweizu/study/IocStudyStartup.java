@@ -19,9 +19,18 @@ public class IocStudyStartup {
 			}
 		}
 
+		System.out.println("=============AOP===============\n");
 		UserService userService = annotationConfigApplicationContext.getBean("userService", UserService.class);
 		userService.printName("用户1");
-		userService.printNameAndAddress("用户2", new Object());
+		System.out.println("=============1结束===============\n");
+		userService.printNameAndAddress("用户2", "重庆");
+		System.out.println("=============2结束===============\n");
+		userService.getName("用户3");
+		System.out.println("=============3结束===============\n");
+		userService.walk("重庆", "成都");
+		System.out.println("=============4结束===============\n");
+		userService.goHome();
+		System.out.println("=============4结束===============\n");
 
 		FooService fooService = annotationConfigApplicationContext.getBean("fooService", FooService.class);
 		fooService.foo();

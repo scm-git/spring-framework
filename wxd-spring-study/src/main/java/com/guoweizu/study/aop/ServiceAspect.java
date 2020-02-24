@@ -2,6 +2,7 @@ package com.guoweizu.study.aop;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.*;
 import org.springframework.stereotype.Component;
 
@@ -63,6 +64,12 @@ public class ServiceAspect {
 	@Pointcut(value = "anyPublicOperation() && inStudyAop()")
 	private void inStudyAopPublicOperation() {}
 
+	@Pointcut(value = "@annotation(com.guoweizu.study.aop.annotation.LogInput)")
+	private void logInput(){}
+
+	@Pointcut(value = "@annotation(com.guoweizu.study.aop.annotation.LogInputAndOutput)")
+	private void logInputAndOutput() {}
+
 
 	/**
 	 * 在调用方法之前执行
@@ -73,7 +80,7 @@ public class ServiceAspect {
 	//@Before("execution(* com.guoweizu..*(..))")
 	@Before(value = "inStudyAopPublicOperation()")
 	public void before() {
-		System.out.println("before 通知。。。。");
+		System.out.println("[@Before],");
 	}
 
 	/**
@@ -81,7 +88,7 @@ public class ServiceAspect {
 	 */
 	@After(value = "inStudyAopPublicOperation()")
 	public void after() {
-		System.out.println("after 通知。。。。");
+		System.out.println("[@After],");
 	}
 
 	/**
@@ -90,7 +97,7 @@ public class ServiceAspect {
 	 */
 	@AfterReturning(value = "inStudyAopPublicOperation()")
 	public void afterReturning() {
-		System.out.println("afterReturning 通知。。。");
+		System.out.println("[@AfterReturning],");
 	}
 
 	/**
@@ -99,33 +106,54 @@ public class ServiceAspect {
 	 */
 	@AfterThrowing(value = "inStudyAopPublicOperation()")
 	public void afterThrowing() {
-		System.out.println("after throwing 通知。。。");
+		System.out.println("[@AfterThrowing],");
 	}
 
 	/**
 	 * 环绕通知，能力最强的一种通知，因为在执行方法的前后可以任意添加切面代码
 	 * 需要注意以下几点：
-	 * 1. 在joinPoint.proceed()之前的代码，会在@Before之前
-	 * 2. 在joinPoint.proceed()之后的代码，在@After, @AfterReturning之后执行
-	 * 3. 如果proceed()抛出异常，则不会执行proceed()之后的代码，且异常通知@AfterThrowing会执行
-	 *
-	 * @param joinPoint
+	 * 1. around通知一定要返回proceed()方法的执行结果，否则方法被拦截后，返回值没有返回，调用者就拿不到原方法return的结果了
+	 * 2. 多个around通知会包裹执行
+	 * 3. 执行顺序：
+	 * 		1. @Around里面pjp.proceed()之前的代码
+	 * 		2. @Before
+	 * 		3. @Around里面pjp.proceed() （实际的业务代码）
+	 * 		4. @AfterThrowing (5,7不会执行)
+	 * 		5. @Around里面pjp.proceed()之后的代码
+	 * 		6. @After (finally)
+	 * 		7. @AfterReturning (4不会执行)
+	 * @param pjp
 	 * @throws Throwable
 	 */
 	@Around(value = "inStudyAopPublicOperation()")
-	public void around(ProceedingJoinPoint joinPoint) throws Throwable {
-		System.out.println("around before calling join point。。。");
-		Object[] args = joinPoint.getArgs();
-		System.out.println("param:" + Arrays.asList(args));
-		Object proceed = joinPoint.proceed();
-		System.out.println("around after calling join point。。。" + proceed);
+	public Object around(ProceedingJoinPoint pjp) throws Throwable {
+		Object[] args = pjp.getArgs();
+		System.out.println("[@Around - proceed之前], input: " + Arrays.asList(args));
+		Object proceed = pjp.proceed();
+		System.out.println("[@Around - proceed之后], output: " + proceed);
+		return proceed;
 	}
 
-	@Before(value = "@annotation(com.guoweizu.study.aop.annotation.Loggable)")
-	public void log(JoinPoint joinPoint) {
+	//@Before(value = "@annotation(com.guoweizu.study.aop.annotation.Loggable)")
+	@Before(value = "logInput()")
+	public void logInput(JoinPoint joinPoint) {
 		Object[] args = joinPoint.getArgs();
-		System.out.println("input param:" + Arrays.asList(args));
+		System.out.println("[@Before], log input: " + Arrays.asList(args));
 	}
 
+	@AfterReturning(returning = "output", value = "@annotation(com.guoweizu.study.aop.annotation.LogOutput)")
+	public void logOutput(Object output) {
+		System.out.println("[@AfterReturning], log output: " + output);
+	}
+
+	@Around(value = "logInputAndOutput()")
+	public Object logInputAndOutput(ProceedingJoinPoint proceedingJoinPoint) throws Throwable{
+		Object[] args = proceedingJoinPoint.getArgs();
+		Signature signature = proceedingJoinPoint.getSignature();
+		System.out.println("["+signature.toShortString()+"], input: " + Arrays.asList(args));
+		Object proceed = proceedingJoinPoint.proceed();
+		System.out.println("["+signature.toShortString()+"], output: " + proceed);
+		return proceed;
+	}
 
 }
