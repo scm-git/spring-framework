@@ -263,11 +263,15 @@ final class PostProcessorRegistrationDelegate {
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
+		/**
+		 * 此处获取所有类型为BeanPostProcessor的BeanDefinition, 然后根据优先级放入beanFactory.beanPostProcessors中
+		 *
+		 */
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
 		/**
 		 * 此时beanFactory中有3-4个BeanPostProcessor，
-		 *  refresh第3步和第5不分别添加进去的，详细点击如下链接：
+		 *  refresh第3步和第5步分别添加进去的，详细点击如下链接：
 		 * {@link org.springframework.beans.factory.support.AbstractBeanFactory#beanPostProcessors }
 		 *
 		 * beanProcessorTargetCount=beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length
@@ -313,6 +317,9 @@ final class PostProcessorRegistrationDelegate {
 		sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
 
+		/**
+		 * AOP的AnnotationAwareAspectJAutoProxyCreator就会在此处添加到beanFactory.beanPostProcessors中，因为它只实现了@Ordered接口
+		 */
 		// Next, register the BeanPostProcessors that implement Ordered.
 		List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>(orderedPostProcessorNames.size());
 		for (String ppName : orderedPostProcessorNames) {

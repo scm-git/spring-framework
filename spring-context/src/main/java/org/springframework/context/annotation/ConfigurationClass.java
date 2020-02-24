@@ -52,6 +52,9 @@ final class ConfigurationClass {
 
 	private final AnnotationMetadata metadata;
 
+	/**
+	 * 配置类的.class文件资源
+	 */
 	private final Resource resource;
 
 	@Nullable
@@ -59,14 +62,24 @@ final class ConfigurationClass {
 
 	private final Set<ConfigurationClass> importedBy = new LinkedHashSet<>(1);
 
+	/**
+	 * 通过@Bean注解注入bean的方法
+	 */
 	private final Set<BeanMethod> beanMethods = new LinkedHashSet<>();
 
 	/**
-	 * 貌似通过这属性 可以从一个外部资源加载beanDefinition ? TODO
+	 * 通过@ImportResource导入的配置，通常是导入xml或者groovy格式的配置文件，spring会判断文件类型，通过后缀判断，
+	 * 1. 如果是groovy，会使用GroovyShell来处理，然后导入相关的BeanDefinition
+	 * 2. 如果是其他，则按照xml格式来处理，会解析xml文件，然后导入配置文件中定义的bean的BeanDefinition
 	 */
 	private final Map<String, Class<? extends BeanDefinitionReader>> importedResources =
 			new LinkedHashMap<>();
 
+	/**
+	 * 通过@Import，并且value 是属于ImportBeanDefinitionRegistrar类型的class：
+	 * 比如{@link EnableAspectJAutoProxy} 中的@Import(AspectJAutoProxyRegistrar.class)
+	 * 将这些value放入这个map中， {@link ConfigurationClassPostProcessor}
+	 */
 	private final Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> importBeanDefinitionRegistrars =
 			new LinkedHashMap<>();
 

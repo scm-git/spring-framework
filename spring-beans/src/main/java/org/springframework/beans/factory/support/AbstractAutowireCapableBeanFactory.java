@@ -1112,6 +1112,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * Spring AOP的关键方法
+	 *
 	 * Apply before-instantiation post-processors, resolving whether there is a
 	 * before-instantiation shortcut for the specified bean.
 	 * @param beanName the name of the bean
@@ -1123,6 +1125,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object bean = null;
 		if (!Boolean.FALSE.equals(mbd.beforeInstantiationResolved)) {
 			// Make sure bean class is actually resolved at this point.
+			/**
+			 * 启用了AOP会注册AOP的AnnotationAwareAspectJAutoProxyCreator， 它就是InstantiationAwareBeanPostProcessor的子类
+			 * 在refresh的第6步就会添加这个BeanPostProcessor到beanFactory.beanPostProcessors中，且会将hasInstantiationAwareBeanPostProcessors属性设置为true
+			 */
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {
@@ -1138,6 +1144,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 如果启用了@EnableAspectJAutoProxy， 那么refresh的第五步会注册AnnotationAwareAspectJAutoProxyCreator BeanDefinition
+	 * 在第六步获取所有的BeanPostProcessor时会获取到这个beanDefinition, 然后放入beanFactory.beanPostProcessors集合中
+	 * AnnotationAwareAspectJAutoProxyCreator 是InstantiationAwareBeanPostProcessor的子类
+	 * 所以此处就会调用到AnnotationAwareAspectJAutoProxyCreator.postProcessBeforeInstantiation方法
+	 * postProcessBeforeInstantiation这个方法的实现在其父类AbstractAutoProxyCreator中
+	 *
 	 * Apply InstantiationAwareBeanPostProcessors to the specified bean definition
 	 * (by class and name), invoking their {@code postProcessBeforeInstantiation} methods.
 	 * <p>Any returned object will be used as the bean instead of actually instantiating

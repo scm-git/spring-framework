@@ -88,6 +88,9 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 	private static final Set<PointcutPrimitive> SUPPORTED_PRIMITIVES = new HashSet<>();
 
 	static {
+		/**
+		 * spring只支持以下几种切入点，并不是AspectJ的全部
+		 */
 		SUPPORTED_PRIMITIVES.add(PointcutPrimitive.EXECUTION);
 		SUPPORTED_PRIMITIVES.add(PointcutPrimitive.ARGS);
 		SUPPORTED_PRIMITIVES.add(PointcutPrimitive.REFERENCE);

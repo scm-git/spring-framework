@@ -44,11 +44,21 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 
 	private final AspectJAdvisorFactory advisorFactory;
 
+	/**
+	 * 缓存所有的切面bean的name，在refresh第十一步createBean时解析放入的
+	 */
 	@Nullable
 	private volatile List<String> aspectBeanNames;
 
+	/**
+	 * 缓存所有的advisor，按照beanName -> List<Advisor>（该bean下的所有通知方法生成的advisor集合）分组，
+	 * 在refresh第十一步createBean时解析放入的
+	 */
 	private final Map<String, List<Advisor>> advisorsCache = new ConcurrentHashMap<>();
 
+	/**
+	 * 同样是缓存advisor，但是这个是对懒加载的bean，缓存的也是一个假的advisor, TODO
+	 */
 	private final Map<String, MetadataAwareAspectInstanceFactory> aspectFactoryCache = new ConcurrentHashMap<>();
 
 
@@ -103,12 +113,20 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						if (beanType == null) {
 							continue;
 						}
+						/**
+						 * this.advisorFactory.isAspect(beanType):
+						 * 查看beanType(bean对应的class)上是否有@Aspect注解，如果有则说明是一个advisor
+						 */
 						if (this.advisorFactory.isAspect(beanType)) {
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+								/**
+								 * 找到某个bean上的所有的Advisor(通知+表达式(切入点))
+								 * 然后放入advisorsCache中， beanName -> List<Advisor>
+								 */
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
 								if (this.beanFactory.isSingleton(beanName)) {
 									this.advisorsCache.put(beanName, classAdvisors);
@@ -131,6 +149,9 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 							}
 						}
 					}
+					/**
+					 * 将所有的切面bean的name放入aspectBeanNames缓存中
+					 */
 					this.aspectBeanNames = aspectNames;
 					return advisors;
 				}

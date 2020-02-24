@@ -589,7 +589,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// 6. Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
 
-				// 初始化国际化支持的messageSource
+				/**
+				 * 初始化国际化支持的messageSource
+				 */
 				// 7. Initialize message source for this context.
 				initMessageSource();
 
@@ -653,6 +655,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第一步
+	 *
 	 * 1. 设置closed为false
 	 * 2. 设置active为true
 	 * 3. 初始化propertySources()，子类实现
@@ -716,6 +720,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第二步
+	 *
 	 * 刷新并获取beanFactory
 	 * refreshBeanFactory只能调用一次，后面的调用会抛出IllegalStateException异常
 	 * this.refreshed.compareAndSet(false, true) 会根据这个返回值判断是否为第一次refresh
@@ -732,6 +738,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第三步
 	 * 准备beanFactory，初始化了beanFactory实例的很多属性
 	 *
 	 * Configure the factory's standard context characteristics,
@@ -804,6 +811,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第四步
+	 *
+	 * 后处理beanFactory，留给子类重写，AnnotationConfigApplication及GenericApplicationContext都没有重写该方法
+	 * 有一些WebApplicationContext的子类重写了的
+	 * 主要是给beanFactory添加更多的BeanPostProcessor以及添加要忽略的依赖等
+	 *
 	 * Modify the application context's internal bean factory after its standard
 	 * initialization. All bean definitions will have been loaded, but no beans
 	 * will have been instantiated yet. This allows for registering special
@@ -814,7 +827,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第五步
+	 *
+	 * 扫描应用中的组件，注册成BeanDefinition, 并放入beanFactory.beanDefinitionMap中
+	 *
 	 * 详细说明参见：PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors
+	 * {@link PostProcessorRegistrationDelegate#invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory, List)}
+	 *
 	 * Instantiate and invoke all registered BeanFactoryPostProcessor beans,
 	 * respecting explicit order if given.
 	 * <p>Must be called before singleton instantiation.
@@ -832,6 +851,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第六步
+	 *
 	 * Instantiate and register all BeanPostProcessor beans,
 	 * respecting explicit order if given.
 	 * <p>Must be called before any instantiation of application beans.
@@ -841,7 +862,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
-	 * 1. 如果用户自己定义了名为messageSource的MessaageSource的bean，那就用用户自己定义的，赋值给messageSource属性，
+	 * refresh第七步
+	 *
+	 * 1. 如果用户自己定义了名为messageSource的MessageSource的bean，那就用用户自己定义的，赋值给messageSource属性，
 	 *    且这是托管在beanFactory中的，通过beanFactory.getBean获取
 	 * 2. 如果没有定义，那就new一个DelegatingMessageSource，赋值给messageSource，通过context.getMessageSource方法获取
 	 *
@@ -879,6 +902,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第八步
+	 *
 	 * 初始化事件广播器
 	 * 1. 如果容器中已经存在了名字为applicationEventMulticaster的事件广播器实例，则不用重新创建
 	 * 2. 如果容器中没有，则new SimpleApplicationEventMulticaster并赋值给applicationEventMulticaster属性，这种方式创建的applicationEventMulticaster没有被spring容器管理,
@@ -937,6 +962,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第九步
+	 *
 	 * Template method which can be overridden to add context-specific refresh work.
 	 * Called on initialization of special beans, before instantiation of singletons.
 	 * <p>This implementation is empty.
@@ -948,6 +975,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第十步
+	 *
 	 * 注册事件监听器：
 	 * 1. 将事件监听器添加到applicationEventMulticaster实例中applicationListeners中(该属性由广播器的私有子类持有)
 	 * 2. 将spring容器(beanFactory中)持有的监听器bean放入到applicationListenerBeans中(该属性也由广播器的私有子类持有)
@@ -982,6 +1011,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第十一步
+	 * 完成单例bean的实例化，里面的doCreateBean也是一个及其复杂的方法
+	 *
 	 * Finish the initialization of this context's bean factory,
 	 * initializing all remaining singleton beans.
 	 */
@@ -1024,6 +1056,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * refresh第十二步
+	 * 最后一步
+	 *
 	 * Finish the refresh of this context, invoking the LifecycleProcessor's
 	 * onRefresh() method and publishing the
 	 * {@link org.springframework.context.event.ContextRefreshedEvent}.

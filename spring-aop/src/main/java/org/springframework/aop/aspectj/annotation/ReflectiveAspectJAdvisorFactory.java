@@ -110,6 +110,12 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	}
 
 
+	/**
+	 * 入参aspectInstanceFactory是根据beanFactory和beanName new出来的
+	 * @param aspectInstanceFactory the aspect instance factory
+	 * (not the aspect instance itself in order to avoid eager instantiation)
+	 * @return
+	 */
 	@Override
 	public List<Advisor> getAdvisors(MetadataAwareAspectInstanceFactory aspectInstanceFactory) {
 		Class<?> aspectClass = aspectInstanceFactory.getAspectMetadata().getAspectClass();
@@ -122,20 +128,35 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 				new LazySingletonAspectInstanceFactoryDecorator(aspectInstanceFactory);
 
 		List<Advisor> advisors = new ArrayList<>();
-		// getAdvisorMethods是排除了@PointCut注解方法的
+		/**
+		 * getAdvisorMethods(aspectClass)：
+		 * 获取@Aspect类中的所有带有通知的方法：@Before, @After, @AfterReturning, @AfterThrowing, @Around
+		 * 但是不包括@PointCut的方法
+		 */
 		for (Method method : getAdvisorMethods(aspectClass)) {
+			/**
+			 * 根据方法上的@Before...等通知及其表达式，创建一个Advisor
+			 * 点击方法查看注释说明
+			 */
 			Advisor advisor = getAdvisor(method, lazySingletonAspectInstanceFactory, advisors.size(), aspectName);
 			if (advisor != null) {
 				advisors.add(advisor);
 			}
 		}
 
+		/**
+		 * isPerThisOrPerTarget 不知道是啥？？ TODO
+		 * 大概意思是：如果发现是一个懒加载的bean，那么就先添加一个假的aspect(advisor)
+		 */
 		// If it's a per target aspect, emit the dummy instantiating aspect.
 		if (!advisors.isEmpty() && lazySingletonAspectInstanceFactory.getAspectMetadata().isLazilyInstantiated()) {
 			Advisor instantiationAdvisor = new SyntheticInstantiationAdvisor(lazySingletonAspectInstanceFactory);
 			advisors.add(0, instantiationAdvisor);
 		}
 
+		/**
+		 * 似乎是查找field上的Advisor
+		 */
 		// Find introduction fields.
 		for (Field field : aspectClass.getDeclaredFields()) {
 			Advisor advisor = getDeclareParentsAdvisor(field);
@@ -190,24 +211,38 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 
 		validate(aspectInstanceFactory.getAspectMetadata().getAspectClass());
 
+		/**
+		 * 根据方法上的@Before...等通知创建表达式切入点
+		 */
 		AspectJExpressionPointcut expressionPointcut = getPointcut(
 				candidateAdviceMethod, aspectInstanceFactory.getAspectMetadata().getAspectClass());
 		if (expressionPointcut == null) {
 			return null;
 		}
 
+		/**
+		 * 通过上一步创建的切入点创建一个Advisor
+		 * InstantiationModelAwarePointcutAdvisorImpl是Advisor的子类
+		 */
 		return new InstantiationModelAwarePointcutAdvisorImpl(expressionPointcut, candidateAdviceMethod,
 				this, aspectInstanceFactory, declarationOrderInAspect, aspectName);
 	}
 
 	@Nullable
 	private AspectJExpressionPointcut getPointcut(Method candidateAdviceMethod, Class<?> candidateAspectClass) {
+
+		/**
+		 * 获取方法上的@Before...这样的通知注解
+		 */
 		AspectJAnnotation<?> aspectJAnnotation =
 				AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(candidateAdviceMethod);
 		if (aspectJAnnotation == null) {
 			return null;
 		}
 
+		/**
+		 * 获取通知上的表达式值，并且使用这个表达式创建切入点
+		 */
 		AspectJExpressionPointcut ajexp =
 				new AspectJExpressionPointcut(candidateAspectClass, new String[0], new Class<?>[0]);
 		ajexp.setExpression(aspectJAnnotation.getPointcutExpression());

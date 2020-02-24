@@ -138,7 +138,7 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 
 		if (configClass.isImported()) {
-			// 加载通过@Import注解导入的BeanDefinition
+			// 加载通过@Import - ImportSelector注解导入的BeanDefinition
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
@@ -146,8 +146,10 @@ class ConfigurationClassBeanDefinitionReader {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
-		// 貌似加载外部的定义的BeanDefinition, groovy, xml文件？
+		// 加载通过@ImportResource配置的BeanDefinition, 通常是xml之类的配置文件，也可以是groovy格式的文件
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+		// 加载通过@Import - ImportBeanDefinitionRegistrar导入的配置；
+		// configClass.getImportBeanDefinitionRegistrars获取到的就是所有@Import的value中的ImportBeanDefinitionRegistrar
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 
@@ -383,6 +385,10 @@ class ConfigurationClassBeanDefinitionReader {
 		});
 	}
 
+	/**
+	 * key就是所有@Import的value中的ImportBeanDefinitionRegistrar
+	 * @param registrars
+	 */
 	private void loadBeanDefinitionsFromRegistrars(Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> registrars) {
 		registrars.forEach((registrar, metadata) ->
 				registrar.registerBeanDefinitions(metadata, this.registry, this.importBeanNameGenerator));

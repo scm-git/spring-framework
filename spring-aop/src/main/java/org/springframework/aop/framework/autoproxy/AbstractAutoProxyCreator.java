@@ -46,6 +46,7 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -240,6 +241,22 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		return wrapIfNecessary(bean, beanName, cacheKey);
 	}
 
+	/**
+	 * 如果启用了spring AOP， 此方法在refresh第11步初始化实例时会被调用到
+	 * 因为启用了AOP会注入AspectJAwareAdvisorAutoProxyCreator，是本类(AbstractAutoProxyCreator的子类)
+	 * 且是InstantiationAwareBeanPostProcessor的子类
+	 * 详细查看{@link org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#createBean(String, RootBeanDefinition, Object[])}
+	 * createBean中调用了:
+	 * {@link org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#resolveBeforeInstantiation(String, RootBeanDefinition)}
+	 *
+	 * 该方法会找到应用中的Advisor并且放入缓存
+	 * 放在 {@link org.springframework.aop.aspectj.annotation.BeanFactoryAspectJAdvisorsBuilder}中的三个属性中
+	 * 点击连接查看说明
+	 *
+	 * @param beanClass the class of the bean to be instantiated
+	 * @param beanName the name of the bean
+	 * @return
+	 */
 	@Override
 	public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
 		Object cacheKey = getCacheKey(beanClass, beanName);
@@ -254,6 +271,14 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			}
 		}
 
+		/**
+		 * 为bean创建代理对象，但是必须要bean存在才能创建，第一次进入时bean还没不存在，所以不会创建
+		 * getCustomTargetSource(beanClass, beanName)方法中会判断bean是否存在；
+		 *
+		 * spring容器启动时，refresh第十一步会创建所有的bean，其实是调用的getBean来触发的创建
+		 * 但是第一次进入getBean方法时，就会调用到此方法，这时bean还没有创建，因此后面这段代码在第一次时不会执行
+		 * 所以第一次只执行了前面的代码，前面的代码就是找出了Advisor并且放入缓存中
+		 */
 		// Create proxy here if we have a custom TargetSource.
 		// Suppresses unnecessary default instantiation of the target bean:
 		// The TargetSource will handle target instances in a custom fashion.
@@ -397,6 +422,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
+	 * 会判断beanFactory是否已经初始化了bean：this.beanFactory.containsBean(beanName)
+	 *
 	 * Create a target source for bean instances. Uses any TargetSourceCreators if set.
 	 * Returns {@code null} if no custom TargetSource should be used.
 	 * <p>This implementation uses the "customTargetSourceCreators" property.

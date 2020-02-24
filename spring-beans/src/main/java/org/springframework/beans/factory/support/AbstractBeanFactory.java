@@ -147,6 +147,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 *
 	 * 在refresh第5步invokeBeanFactoryPostProcessors会添加一个：
 	 * ImportAwareBeanPostProcessor
+	 * 如果第五步扫描到@EnableXXX或者@Import中有BeanPostProcessor也会添加进来，
+	 * 比如：@EnableAspectJAutoProxy(spring aop)，就会添加AnnotationAwareAspectJAutoProxyCreator
 	 *
 	 * 添加到该列表的beanPostProcessor是有优先级排序的：
 	 * PriorityOrdered > Ordered > 其他 > spring内置
@@ -949,6 +951,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Assert.notNull(beanPostProcessor, "BeanPostProcessor must not be null");
 		// Remove from old position, if any
 		this.beanPostProcessors.remove(beanPostProcessor);
+		/**
+		 * 启用了AOP会注册AOP的AnnotationAwareAspectJAutoProxyCreator， 它就是InstantiationAwareBeanPostProcessor的子类
+		 * 因此，启用了AOP之后，hasInstantiationAwareBeanPostProcessors属性就为true了
+		 */
 		// Track whether it is instantiation/destruction aware
 		if (beanPostProcessor instanceof InstantiationAwareBeanPostProcessor) {
 			this.hasInstantiationAwareBeanPostProcessors = true;
@@ -974,6 +980,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
+	 * 启用了AOP会注册AOP的AnnotationAwareAspectJAutoProxyCreator， 它就是InstantiationAwareBeanPostProcessor的子类
+	 * 在refresh的第6步就会添加这个BeanPostProcessor到beanFactory.beanPostProcessors中，且会将hasInstantiationAwareBeanPostProcessors属性设置为true
+	 *
 	 * Return whether this factory holds a InstantiationAwareBeanPostProcessor
 	 * that will get applied to singleton beans on shutdown.
 	 * @see #addBeanPostProcessor

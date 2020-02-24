@@ -124,6 +124,11 @@ public abstract class AbstractAspectJAdvisorFactory implements AspectJAdvisorFac
 	}
 
 	/**
+	 * 获取方法上的所有注解，并查找是否是ASPECTJ_ANNOTATION_CLASSES中定义的注解(Aspect定义的5个通知+Pointcut)，如果是就直接返回找到的这个注解
+	 * 只处理一个，因为一个方法上就应该只有一个，如果有多个，有一个会被忽略掉，开发人员也不应该在一个方法上写多个@Before这样的通知
+	 *
+	 * 并且这里不会拿到@Pointcut的注解，因为这种注解的方法已经在上一步过滤掉了
+	 *
 	 * Find and return the first AspectJ annotation on the given method
 	 * (there <i>should</i> only be one anyway...).
 	 */

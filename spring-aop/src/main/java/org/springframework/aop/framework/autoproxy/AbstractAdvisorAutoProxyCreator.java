@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.springframework.aop.Advisor;
 import org.springframework.aop.TargetSource;
+import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -91,6 +92,11 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @see #extendAdvisors
 	 */
 	protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
+		/**
+		 * findCandidateAdvisors()可能并不是直接调用的本类的该方法，因为
+		 * 启用AOP注册了AnnotationAwareAspectJAutoProxyCreator， 下面这行findCandidateAdvisors()方法会调用{@link AnnotationAwareAspectJAutoProxyCreator#findCandidateAdvisors()}
+		 * 而里面会调用其父类的findCandidateAdvisors，也就是本类的{@link #findCandidateAdvisors()}方法
+		 */
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
 		extendAdvisors(eligibleAdvisors);

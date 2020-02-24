@@ -67,8 +67,10 @@ import org.springframework.util.ClassUtils;
 
 /**
  * =======非常重要的一个类======
- * 应用中的组件的BeanDefinition就是通过这个类的postProcessBeanDefinitionRegistry方法加载进来的
+ * 该类是BeanDefinitionRegistryPostProcessor的子类，在AnnotationConfigApplicationText初始化reader时就会注册这个类的BeanDefinition到beanFactory.beanDefinitionMap中
+ * 然后在refresh的第五步调用invokeBeanFactoryPostProcessor时就调用该类postProcessBeanDefinitionRegistry方法来扫描并加重所有组件的BeanDefinition
  *
+ * 应用中的组件的BeanDefinition就是通过这个类的postProcessBeanDefinitionRegistry方法加载进来的
  * 启动时后处理@Configuration注解的类，@Configuration注解的类会被解析为一个ConfigurationClass实例
  *
  * {@link BeanFactoryPostProcessor} used for bootstrapping processing of
@@ -328,7 +330,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			return Integer.compare(i1, i2);
 		});
 
-		// 这段不是太明白
+		// 这段不是太明白 TODO
 		// Detect any custom bean name generation strategy supplied through the enclosing application context
 		SingletonBeanRegistry sbr = null;
 		if (registry instanceof SingletonBeanRegistry) {
@@ -380,6 +382,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			}
 
 			// 此处加载@Import 以及 @Bean的BeanDefinition到beanFactory.beanDefinitionMap中
+			// 在parse阶段解析的@Import @ImportResource @Bean注解已经放入configClass对应的三个集合中
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 
