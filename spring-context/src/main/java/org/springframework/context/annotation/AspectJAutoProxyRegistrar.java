@@ -36,6 +36,10 @@ import org.springframework.core.type.AnnotationMetadata;
  *    该方法注册了一个BeanDefinition: AnnotationAwareAspectJAutoProxyCreator
  * 4. {@link org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator} 这个类会在refresh的第十一步用到
  *
+ * AOP的3大步骤：
+ * 1. 找到增强器(Advisor)
+ * 2. 将增强器设置到代理对象里面去
+ * 3. 通过代理对象调用
  *
  * Registers an {@link org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator
  * AnnotationAwareAspectJAutoProxyCreator} against the current {@link BeanDefinitionRegistry}

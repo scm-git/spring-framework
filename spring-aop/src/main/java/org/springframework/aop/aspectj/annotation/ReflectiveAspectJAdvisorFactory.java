@@ -112,16 +112,32 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 
 	/**
 	 * 入参aspectInstanceFactory是根据beanFactory和beanName new出来的
+	 *
 	 * @param aspectInstanceFactory the aspect instance factory
 	 * (not the aspect instance itself in order to avoid eager instantiation)
 	 * @return
 	 */
 	@Override
 	public List<Advisor> getAdvisors(MetadataAwareAspectInstanceFactory aspectInstanceFactory) {
+		/**
+		 * 获取切面类，带有@Aspect注解的类
+		 */
 		Class<?> aspectClass = aspectInstanceFactory.getAspectMetadata().getAspectClass();
+		/**
+		 * 切面的名称，类的首字母小写
+		 */
 		String aspectName = aspectInstanceFactory.getAspectMetadata().getAspectName();
 		validate(aspectClass);
 
+		/**
+		 * 此处涉及到3个factory类：
+		 * 1. {@link MetadataAwareAspectInstanceFactory}
+		 * 2. {@link LazySingletonAspectInstanceFactoryDecorator}
+		 * 3. {@link BeanFactoryAspectInstanceFactory}
+		 *
+		 * 2，3是1的子类，2引用了1，也就可以引用1的子类3，所以2中有3
+		 * 3是根据beanFactory和beanName new出来的
+		 */
 		// We need to wrap the MetadataAwareAspectInstanceFactory with a decorator
 		// so that it will only instantiate once.
 		MetadataAwareAspectInstanceFactory lazySingletonAspectInstanceFactory =
@@ -135,7 +151,7 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		 */
 		for (Method method : getAdvisorMethods(aspectClass)) {
 			/**
-			 * 根据方法上的@Before...等通知及其表达式，创建一个Advisor
+			 * 对每个方法，根据其上的@Before...等通知及其表达式，创建一个Advisor
 			 * 点击方法查看注释说明
 			 */
 			Advisor advisor = getAdvisor(method, lazySingletonAspectInstanceFactory, advisors.size(), aspectName);
@@ -168,6 +184,14 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		return advisors;
 	}
 
+	/**
+	 * getAdvisorMethods(aspectClass)：
+	 * 获取@Aspect类中的所有带有通知的方法：@Before, @After, @AfterReturning, @AfterThrowing, @Around
+	 * 但是不包括@PointCut的方法
+	 *
+	 * @param aspectClass
+	 * @return
+	 */
 	private List<Method> getAdvisorMethods(Class<?> aspectClass) {
 		final List<Method> methods = new ArrayList<>();
 		ReflectionUtils.doWithMethods(aspectClass, method -> {
@@ -204,6 +228,15 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	}
 
 
+	/**
+	 * method是带有@Before...等通知的方法
+	 *
+	 * @param candidateAdviceMethod the candidate advice method
+	 * @param aspectInstanceFactory the aspect instance factory
+	 * @param declarationOrderInAspect
+	 * @param aspectName the name of the aspect
+	 * @return
+	 */
 	@Override
 	@Nullable
 	public Advisor getAdvisor(Method candidateAdviceMethod, MetadataAwareAspectInstanceFactory aspectInstanceFactory,
@@ -221,7 +254,8 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		}
 
 		/**
-		 * 通过上一步创建的切入点创建一个Advisor
+		 * =============非常重要的一个步骤=================
+		 * 根据上一步创建的切入点创建一个Advisor，
 		 * InstantiationModelAwarePointcutAdvisorImpl是Advisor的子类
 		 */
 		return new InstantiationModelAwarePointcutAdvisorImpl(expressionPointcut, candidateAdviceMethod,
@@ -258,6 +292,9 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	public Advice getAdvice(Method candidateAdviceMethod, AspectJExpressionPointcut expressionPointcut,
 			MetadataAwareAspectInstanceFactory aspectInstanceFactory, int declarationOrder, String aspectName) {
 
+		/**
+		 * 取出@Aspect切面类
+		 */
 		Class<?> candidateAspectClass = aspectInstanceFactory.getAspectMetadata().getAspectClass();
 		validate(candidateAspectClass);
 
