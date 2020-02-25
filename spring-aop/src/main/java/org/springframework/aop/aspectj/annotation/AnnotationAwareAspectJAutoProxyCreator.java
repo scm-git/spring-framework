@@ -60,6 +60,12 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 	@Nullable
 	private AspectJAdvisorFactory aspectJAdvisorFactory;
 
+	/**
+	 * 该字段中有aspect的相关缓存属性：
+	 * aspectBeanNames： 所有的aspect类的beanName
+	 * advisorsCache： @Aspect的beanName -> List<Advisor>的map集合
+	 * aspectFactoryCache 懒加载
+	 */
 	@Nullable
 	private BeanFactoryAspectJAdvisorsBuilder aspectJAdvisorsBuilder;
 

@@ -398,6 +398,21 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		return initializeBean(beanName, existingBean, null);
 	}
 
+	/**
+	 * 初始化之前调用BeanPostProcessor.postProcessBeforeInitialization方法，对所有的bean进行init方法之前的处理
+	 * {@link #applyBeanPostProcessorsBeforeInitialization(Object, String)}  -- 在{@link #doCreateBean(String, RootBeanDefinition, Object[])}方法中调用，
+	 * 且bean已经完成实例化，并且设置了属性之后调用，在doCreateBean中调用的{@link #initializeBean(String, Object, RootBeanDefinition)}方法中调用
+	 *
+	 * 这个方法没有什么逻辑
+	 *
+	 * @param existingBean the existing bean instance
+	 * @param beanName the name of the bean, to be passed to it if necessary
+	 * (only passed to {@link BeanPostProcessor BeanPostProcessors};
+	 * can follow the {@link #ORIGINAL_INSTANCE_SUFFIX} convention in order to
+	 * enforce the given instance to be returned, i.e. no proxies etc)
+	 * @return
+	 * @throws BeansException
+	 */
 	@Override
 	public Object applyBeanPostProcessorsBeforeInitialization(Object existingBean, String beanName)
 			throws BeansException {
@@ -413,8 +428,27 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		return result;
 	}
 
+	/**
+	 * AOP的两个关键方法：
+	 * 1. {@link #applyBeanPostProcessorsBeforeInstantiation(Class, String)} -- 本方法在doCreateBean之前调用，目的是找出所有的@Advisor
+	 * 2. {@link #applyBeanPostProcessorsAfterInitialization(Object, String)}  -- 在{@link #doCreateBean(String, RootBeanDefinition, Object[])}方法中调用，
+	 *    且bean已经完成实例化，并且设置了属性之后调用，在doCreateBean中调用的{@link #initializeBean(String, Object, RootBeanDefinition)}方法中调用
+	 * 这两个方法就是AOP的与spring容器中bean关联的关键方法
+	 *
+	 * refresh第五步扫描到@EnableAspectJAutoProxy(spring aop)，就会添加AnnotationAwareAspectJAutoProxyCreator
+	 * 所以此处调用processor.postProcessAfterInitialization(result, beanName)时就会调用：
+	 * AnnotationAwareAspectJAutoProxyCreator类继承自父类AbstractAutoProxyCreator的postProcessAfterInitialization方法
+	 *
+	 * @param existingBean the existing bean instance
+	 * @param beanName the name of the bean, to be passed to it if necessary
+	 * (only passed to {@link BeanPostProcessor BeanPostProcessors};
+	 * can follow the {@link #ORIGINAL_INSTANCE_SUFFIX} convention in order to
+	 * enforce the given instance to be returned, i.e. no proxies etc)
+	 * @return
+	 * @throws BeansException
+	 */
 	@Override
-	public Object applyBeanPostProcessorsAfterInitialization(Object existingBean, String beanName)
+	public Object  applyBeanPostProcessorsAfterInitialization(Object existingBean, String beanName)
 			throws BeansException {
 
 		Object result = existingBean;
@@ -495,9 +529,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			// 返回bean的代理； AOP的关键点
-			// 首次创建bean时不会创建代理对象，因为bean都不存在，没有代理的必要
-			// 找出AOP的切面并且缓存起来
+			/**
+			 *  返回bean的代理； AOP的关键点
+			 * 	首次创建bean时不会创建代理对象，因为bean都不存在，没有代理的必要
+			 * 	找出AOP的切面并且缓存起来
+			 */
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
@@ -600,13 +636,15 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		try {
 			// 给bean的成员变量赋值(带有@Autowired注解的变量)
 			populateBean(beanName, mbd, instanceWrapper);
-			// 如下方法步骤如下：
-			// 1. 调用各种aware接口的方法
-			// 2. 调用BeanPostProcessor的postProcessBeforeInitialization方法
-			// 3. 调用配置的init方法
-			//    3.1 调用InitializingBean的afterPropertiesSet方法
-			//    3.2 调用自定义的init方法
-			// 4. 调用BeanPostProcessor的postProcessAfterInitialization方法（此步骤是动态代理的核心步骤）
+			/**
+			 * 如下方法步骤如下：
+			 * 1. 调用各种aware接口的方法
+			 * 2. 调用BeanPostProcessor的postProcessBeforeInitialization方法
+			 * 3. 调用配置的init方法
+			 *    3.1 调用InitializingBean的afterPropertiesSet方法
+			 *    3.2 调用自定义的init方法
+			 * 4. 调用BeanPostProcessor的postProcessAfterInitialization方法（此步骤是动态代理的核心步骤）
+			 */
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
 		catch (Throwable ex) {
@@ -1149,6 +1187,21 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * AnnotationAwareAspectJAutoProxyCreator 是InstantiationAwareBeanPostProcessor的子类
 	 * 所以此处就会调用到AnnotationAwareAspectJAutoProxyCreator.postProcessBeforeInstantiation方法
 	 * postProcessBeforeInstantiation这个方法的实现在其父类AbstractAutoProxyCreator中
+	 *
+	 * 该方法的目的是找出所有@Apsect类型的方法，并且将这些方法解析为Advisor，并放入缓存中，缓存在：
+	 * AnnotationAwareAspectJAutoProxyCreator.aspectJAdvisorsBuilder属性中
+	 *
+	 * AOP的两个关键方法：
+	 * 1. {@link #applyBeanPostProcessorsBeforeInstantiation(Class, String)} -- 本方法在doCreateBean之前调用，目的是找出所有的@Advisor
+	 * 2. {@link #applyBeanPostProcessorsAfterInitialization(Object, String)} -- 在{@link #doCreateBean(String, RootBeanDefinition, Object[])}方法中调用，
+	 *    且bean已经完成实例化，并且设置了属性之后调用，在doCreateBean中调用的{@link #initializeBean(String, Object, RootBeanDefinition)}方法中调用
+	 * 这两个方法就是AOP的与spring容器中bean关联的关键方法
+	 *
+	 * 此方法在实例化之前执行：(调用doCreateBean之前执行)
+	 * 由下面的方法调用过来
+	 * 1. {@link #createBean(String, RootBeanDefinition, Object[])}
+	 * 2. {@link #resolveBeforeInstantiation(String, RootBeanDefinition)}
+	 *
 	 *
 	 * Apply InstantiationAwareBeanPostProcessors to the specified bean definition
 	 * (by class and name), invoking their {@code postProcessBeforeInstantiation} methods.
@@ -1846,7 +1899,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		Object wrappedBean = bean;
 		if (mbd == null || !mbd.isSynthetic()) {
-			// 调用所有BeanPostProcessor的postProcessBeforeInitialization方法
+			/**
+			 * 调用所有BeanPostProcessor的postProcessBeforeInitialization方法，这步没有什么业务逻辑
+			 */
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
@@ -1860,8 +1915,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Invocation of init method failed", ex);
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
-			// 调用所有BeanPostProcessor的postProcessAfterInitialization方法
-			// 动态代理的核心步骤；AOP及事务就是在此步骤创建动态代理对象的
+			/**
+			 * 调用所有BeanPostProcessor的postProcessAfterInitialization方法
+			 * 动态代理的核心步骤；AOP及事务就是在此步骤创建动态代理对象的
+			 */
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 

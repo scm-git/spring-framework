@@ -16,7 +16,7 @@ import java.util.Set;
 @ComponentScan(basePackages = "com.guoweizu")
 @Configuration
 @Import(value = Bar2Service.class)
-@EnableAspectJAutoProxy
+@EnableAspectJAutoProxy(exposeProxy = true)
 public class IocStudyConfig {
 
 	@Bean(name = "bean2")

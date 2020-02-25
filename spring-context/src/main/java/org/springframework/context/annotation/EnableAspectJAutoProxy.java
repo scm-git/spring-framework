@@ -123,12 +123,18 @@ import java.lang.annotation.Target;
 public @interface EnableAspectJAutoProxy {
 
 	/**
+	 * 强制使用CGLIB
+	 * 默认为false，使用JDK动态代理
+	 *
 	 * Indicate whether subclass-based (CGLIB) proxies are to be created as opposed
 	 * to standard Java interface-based proxies. The default is {@code false}.
 	 */
 	boolean proxyTargetClass() default false;
 
 	/**
+	 * 默认为false，被拦截方法中不能通过AopContext调用其他方法，会抛出异常
+	 * 为true时，在被拦截方法中再次调用AopContext.currentProxy.xxxx()(xxxx为另一个被拦截方法)时，两个方法都会被拦截
+	 *
 	 * Indicate that the proxy should be exposed by the AOP framework as a {@code ThreadLocal}
 	 * for retrieval via the {@link org.springframework.aop.framework.AopContext} class.
 	 * Off by default, i.e. no guarantees that {@code AopContext} access will work.

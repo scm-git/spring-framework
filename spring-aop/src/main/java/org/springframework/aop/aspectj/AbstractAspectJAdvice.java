@@ -50,6 +50,15 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
+ * 增强器：5个子类，分别对应5种类型的通知
+ * @Before
+ * @After
+ * @AfterReturning
+ * @AfterThrowing
+ * @Around
+ *
+ * 就是对以上五种注解方法的封装，这个类就包括切入点(pointcut)已经method等其他元信息
+ *
  * Base class for AOP Alliance {@link org.aopalliance.aop.Advice} classes
  * wrapping an AspectJ aspect or an AspectJ-annotated advice method.
  *

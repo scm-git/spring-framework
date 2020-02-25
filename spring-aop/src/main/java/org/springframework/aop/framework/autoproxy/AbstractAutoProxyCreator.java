@@ -242,7 +242,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * 如果启用了spring AOP， 此方法在refresh第11步初始化实例时会被调用到
+	 * 如果启用了spring AOP， 此方法在refresh第11步初始化实例步骤中的doCreateBean之前会被调用到
 	 * 因为启用了AOP会注入AspectJAwareAdvisorAutoProxyCreator，是本类(AbstractAutoProxyCreator的子类)
 	 * 且是InstantiationAwareBeanPostProcessor的子类
 	 * 详细查看{@link org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#createBean(String, RootBeanDefinition, Object[])}
@@ -312,6 +312,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
+	 * 此步骤中的wrapIfNeccary会为target创建代理类：JDK/CGLIB
+	 *
 	 * Create a proxy with the configured interceptors if the bean is
 	 * identified as one to proxy by the subclass.
 	 * @see #getAdvicesAndAdvisorsForBean

@@ -152,7 +152,10 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		for (Method method : getAdvisorMethods(aspectClass)) {
 			/**
 			 * 对每个方法，根据其上的@Before...等通知及其表达式，创建一个Advisor
+			 * 一个method对应一个Advisor
 			 * 点击方法查看注释说明
+			 * advisor=advice+pointcut+(一些元数据：method+aspectClass+...)
+			 * advice是{@link AbstractAspectJAdvice}的子类，就是对应5种通知
 			 */
 			Advisor advisor = getAdvisor(method, lazySingletonAspectInstanceFactory, advisors.size(), aspectName);
 			if (advisor != null) {
