@@ -6,10 +6,8 @@ import com.guoweizu.study.aop.annotation.LogOutput;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
-
 @Service
-public class UserService {
+public class UserService implements IUserService{
 	@LogInput
 	public void printName(String name) {
 		System.out.println("user.name:"  + name);
@@ -39,9 +37,9 @@ public class UserService {
 
 	@LogInputAndOutput
 	public void goHome() {
-		System.out.println("go home before");
-		((UserService)AopContext.currentProxy()).printName("name in home");
-		System.out.println("go home after");
+		//System.out.println("go home before");
+		//((UserService)AopContext.currentProxy()).printName("name in home");
+		//System.out.println("go home after");
 	}
 
 

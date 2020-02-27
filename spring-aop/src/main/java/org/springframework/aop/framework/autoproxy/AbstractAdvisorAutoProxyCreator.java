@@ -24,6 +24,7 @@ import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProx
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -69,11 +70,23 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	}
 
 
+	/**
+	 * 调用此方法时，缓存中已经有切面了，所以此处调用findEligibleAdvisors(beanClass, beanName)这行代码，
+	 * 是直接获取的缓存数据：{@link AnnotationAwareAspectJAutoProxyCreator#aspectJAdvisorsBuilder}
+	 *
+	 * @param beanClass the class of the bean to advise
+	 * @param beanName the name of the bean
+	 * @param targetSource
+	 * @return
+	 */
 	@Override
 	@Nullable
 	protected Object[] getAdvicesAndAdvisorsForBean(
 			Class<?> beanClass, String beanName, @Nullable TargetSource targetSource) {
 
+		/**
+		 * 找到试用于该bean的所有advisor， 调用{@link #findAdvisorsThatCanApply(List, Class, String)}方法去查找
+		 */
 		List<Advisor> advisors = findEligibleAdvisors(beanClass, beanName);
 		if (advisors.isEmpty()) {
 			return DO_NOT_PROXY;
@@ -82,6 +95,9 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	}
 
 	/**
+	 * 调用此方法时，缓存中已经有切面了，所以此处调用findCandidateAdvisors(beanClass, beanName)这行代码，
+	 * 是直接获取的缓存数据：{@link AnnotationAwareAspectJAutoProxyCreator#aspectJAdvisorsBuilder}
+	 *
 	 * Find all eligible Advisors for auto-proxying this class.
 	 * @param beanClass the clazz to find advisors for
 	 * @param beanName the name of the currently proxied bean
@@ -98,6 +114,9 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 		 * 而里面会调用其父类的findCandidateAdvisors，也就是本类的{@link #findCandidateAdvisors()}方法
 		 */
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
+		/**
+		 * 找到试用于该bean的所有advisor
+		 */
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
 		extendAdvisors(eligibleAdvisors);
 		if (!eligibleAdvisors.isEmpty()) {

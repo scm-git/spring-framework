@@ -1,6 +1,7 @@
 package com.guoweizu.study;
 
 
+import com.guoweizu.study.aop.service.IUserService;
 import com.guoweizu.study.aop.service.UserService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -20,7 +21,7 @@ public class IocStudyStartup {
 		}
 
 		System.out.println("=============AOP===============\n");
-		UserService userService = annotationConfigApplicationContext.getBean("userService", UserService.class);
+		IUserService userService = (IUserService) annotationConfigApplicationContext.getBean("userService");
 		userService.printName("用户1");
 		System.out.println("=============1结束===============\n");
 		userService.printNameAndAddress("用户2", "重庆");

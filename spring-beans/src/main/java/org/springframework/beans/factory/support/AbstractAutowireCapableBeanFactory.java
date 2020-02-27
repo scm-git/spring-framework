@@ -76,6 +76,9 @@ import org.springframework.util.ReflectionUtils.MethodCallback;
 import org.springframework.util.StringUtils;
 
 /**
+ * 本类中的以下两个方法是AOP的关键方法：
+ *
+ *
  * Abstract bean factory superclass that implements default bean creation,
  * with the full capabilities specified by the {@link RootBeanDefinition} class.
  * Implements the {@link org.springframework.beans.factory.config.AutowireCapableBeanFactory}
@@ -457,6 +460,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			if (current == null) {
 				return result;
 			}
+			/**
+			 * 注意这个赋值的地方：
+			 * AOP中如果找到了适用于该existingBean的切入点，那么就会为这个bean创建代理对象，然后返回
+			 * 所以这个current就可能是一个包裹了原始bean的代理对象
+			 * 这个赋值就是把代理对象赋值给result，所以就会将这个代理对象存入beanFactory的单例缓存池中，
+			 *
+			 * 以后通过getBean()方法获取对象时，就是取到这个代理对象了
+			 */
 			result = current;
 		}
 		return result;
@@ -1151,6 +1162,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 	/**
 	 * Spring AOP的关键方法
+	 * 在{@link #createBean(String, RootBeanDefinition, Object[])}中调用，在doCreateBean之前调用
 	 *
 	 * Apply before-instantiation post-processors, resolving whether there is a
 	 * before-instantiation shortcut for the specified bean.

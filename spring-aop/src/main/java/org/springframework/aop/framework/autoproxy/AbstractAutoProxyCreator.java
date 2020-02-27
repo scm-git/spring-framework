@@ -136,6 +136,14 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	private final Map<Object, Object> earlyProxyReferences = new ConcurrentHashMap<>(16);
 
+	/**
+	 * 在refresh第11步:
+	 * doGetBean(beanXXX) -> getSingleton -> getObject -> createBean ->doCreateBean -> initializeBean -> applyBeanPostProcessorsAfterInitialization
+	 * -> postProcessAfterInitialization -> {@link #wrapIfNecessary(Object, String, Object)}
+	 * 如果发现有适用于beanXXX的advisor存在，那么就会这个beanXXX创建一个代理对象，然后放入这个缓存中：
+	 * beanXXX -> class com.sun.proxy.$Proxy34
+	 *
+	 */
 	private final Map<Object, Class<?>> proxyTypes = new ConcurrentHashMap<>(16);
 
 	private final Map<Object, Boolean> advisedBeans = new ConcurrentHashMap<>(256);
@@ -312,7 +320,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * 此步骤中的wrapIfNeccary会为target创建代理类：JDK/CGLIB
+	 * 此步骤中的wrapIfNecessary会为target创建代理类：JDK/CGLIB
 	 *
 	 * Create a proxy with the configured interceptors if the bean is
 	 * identified as one to proxy by the subclass.
@@ -352,6 +360,10 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
+	 * refresh()第十一步 -> finishBeanFactoryInitialization -> preInstantiateSingletons -> getBean -> doGetBean(beanXXX)
+	 * -> getSingleton -> getObject -> createBean ->doCreateBean -> initializeBean -> applyBeanPostProcessorsAfterInitialization
+	 * -> postProcessAfterInitialization -> {@link #wrapIfNecessary(Object, String, Object)}
+	 *
 	 * Wrap the given bean if necessary, i.e. if it is eligible for being proxied.
 	 * @param bean the raw bean instance
 	 * @param beanName the name of the bean
@@ -370,10 +382,17 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			return bean;
 		}
 
+		/**
+		 * 查找适用于该bean的所有的advisor，如果查找到不为空，将beanName放入advisedBeans缓存中
+		 * 所以初始化bean时，一旦检测到有advisor会拦截bean中的方法，就会添加这个bean到advisedBeans缓存中，并且为这个bean创建代理
+		 */
 		// Create proxy if we have advice.
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
+			/**
+			 * 有适用于该bean的切面，为这个bean创建代理对象
+			 */
 			Object proxy = createProxy(
 					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			this.proxyTypes.put(cacheKey, proxy.getClass());

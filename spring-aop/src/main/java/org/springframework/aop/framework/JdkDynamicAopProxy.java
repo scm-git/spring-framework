@@ -182,6 +182,10 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 			Object retVal;
 
 			if (this.advised.exposeProxy) {
+				/**
+				 * 暴露代理对象给线程本地变量， EnableAspectJAutoProxy中的exposeProxy属性
+				 * 如果不配置，在拦截方法中通过代理调用另一个被拦截方法时，就无法通过{@link AopContext#currentProxy()}方法获取到，
+				 */
 				// Make invocation available if necessary.
 				oldProxy = AopContext.setCurrentProxy(proxy);
 				setProxyContext = true;
@@ -192,6 +196,9 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 			target = targetSource.getTarget();
 			Class<?> targetClass = (target != null ? target.getClass() : null);
 
+			/**
+			 * 将增强器转换为拦截器： Advisor -> MethodInterceptor
+			 */
 			// Get the interception chain for this method.
 			List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 
