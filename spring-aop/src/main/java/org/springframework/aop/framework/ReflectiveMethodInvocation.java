@@ -181,6 +181,15 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 			}
 		}
 		else {
+			/**
+			 * spring 事务拦截器是调用的: TransactionInterceptor方法的invoke方法
+			 * 其他AOP的方法就是分别调用的各自的拦截器：
+			 * @Before通知的拦截器方法： MethodBeforeAdviceInterceptor
+			 * @AfterReturning通知的拦截器方法： AfterReturningAdviceInterceptor
+			 * @After通知：AspectJAfterAdvice
+			 * @AfterThrowing通知： AspectJAfterThrowingAdvice
+			 */
+
 			// It's an interceptor, so we just invoke it: The pointcut will have
 			// been evaluated statically before this object was constructed.
 			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);

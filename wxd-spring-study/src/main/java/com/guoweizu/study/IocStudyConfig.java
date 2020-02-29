@@ -2,6 +2,7 @@ package com.guoweizu.study;
 
 import com.test.Bar2Service;
 import org.springframework.context.annotation.*;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -17,6 +18,7 @@ import java.util.Set;
 @Configuration
 @Import(value = Bar2Service.class)
 @EnableAspectJAutoProxy
+@EnableTransactionManagement
 public class IocStudyConfig {
 
 	@Bean(name = "bean2")

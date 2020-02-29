@@ -15,6 +15,7 @@ dependencies {
     compile(project(":spring-core"))
     compile(project(":spring-expression"))
     compile(project(":spring-context"))
+    compile(project(":spring-tx"))
     compile("org.aspectj:aspectjweaver")
     compile("org.apache.commons:commons-pool2")
     compile("com.jamonapi:jamon")

@@ -247,6 +247,11 @@ public abstract class AopUtils {
 		for (Class<?> clazz : classes) {
 			Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz);
 			for (Method method : methods) {
+				/**
+				 * spring事务处理会进入methodMatcher.matches(method, targetClass)方法，该方法调用：
+				 * TransactionAttributeSourcePointcut.matches方法
+				 *
+				 */
 				if (introductionAwareMethodMatcher != null ?
 						introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
 						methodMatcher.matches(method, targetClass)) {
@@ -285,6 +290,9 @@ public abstract class AopUtils {
 			return ((IntroductionAdvisor) advisor).getClassFilter().matches(targetClass);
 		}
 		else if (advisor instanceof PointcutAdvisor) {
+			/**
+			 * ProxyTransactionManagementConfiguration中注册的事务Advisor(BeanFactoryTransactionAttributeSourceAdvisor)就是这个类型
+			 */
 			PointcutAdvisor pca = (PointcutAdvisor) advisor;
 			return canApply(pca.getPointcut(), targetClass, hasIntroductions);
 		}

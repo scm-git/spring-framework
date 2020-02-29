@@ -19,6 +19,14 @@ package org.springframework.transaction;
 import org.springframework.lang.Nullable;
 
 /**
+ * spring事务管理器顶级接口，定义了3个方法：
+ * 1. getTransaction: 获取当前事务定义信息
+ * 2. commit: 提交
+ * 3. rollback: 回滚
+ *
+ * 常用实现类：
+ * {@link org.springframework.jdbc.datasource.DataSourceTransactionManager},
+ *
  * This is the central interface in Spring's transaction infrastructure.
  * Applications can use this directly, but it is not primarily meant as API:
  * Typically, applications will work with either TransactionTemplate or

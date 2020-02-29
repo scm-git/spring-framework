@@ -16,17 +16,21 @@
 
 package org.springframework.context.annotation;
 
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.aop.config.AopConfigUtils;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
 
 /**
+ * refresh第五步扫描组件的时候会注册这个BeanDefinition
+ *
  * Registers an auto proxy creator against the current {@link BeanDefinitionRegistry}
  * as appropriate based on an {@code @Enable*} annotation having {@code mode} and
  * {@code proxyTargetClass} attributes set to the correct values.
@@ -40,6 +44,19 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 	private final Log logger = LogFactory.getLog(getClass());
 
 	/**
+	 * 查看如下调用链：注册当前这个类的BeanDefinition
+	 * refresh -> invokeBeanFactoryPostProcessors ->
+	 * {@link org.springframework.context.support.PostProcessorRegistrationDelegate#invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory, List)} ->
+	 * invokeBeanDefinitionRegistryPostProcessors -> postProcessBeanDefinitionRegistry ->
+	 * processConfigBeanDefinitions (这个步骤会解析到@EnableTransactionManagement中selectImports引入的AutoProxyRegistray)
+	 * -> loadBeanDefinitions ->
+	 * loadBeanDefinitionForConfigurationClass -> loadBeanDefinitionsFromRegistrars ->
+	 * registrar.registerBeanDefinitions （此处是调用当前类的父类方法） -> registerBeanDefinitions (此处才是当前类的方法)
+	 *
+	 * 参考：
+	 * {@link ConfigurationClassPostProcessor#processConfigBeanDefinitions(BeanDefinitionRegistry)}
+	 * {@link ConfigurationClassBeanDefinitionReader#loadBeanDefinitionsForConfigurationClass(ConfigurationClass, ConfigurationClassBeanDefinitionReader.TrackedConditionEvaluator)}
+	 *
 	 * Register, escalate, and configure the standard auto proxy creator (APC) against the
 	 * given registry. Works by finding the nearest annotation declared on the importing
 	 * {@code @Configuration} class that has both {@code mode} and {@code proxyTargetClass}

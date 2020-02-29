@@ -37,6 +37,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
+ * refresh第三步prepareBeanFactory()的时候回new 一个StandardBeanExpressionResolver赋值给beanFactory.beanExpressionResolver属性
+ *
  * Standard implementation of the
  * {@link org.springframework.beans.factory.config.BeanExpressionResolver}
  * interface, parsing and evaluating Spring EL using Spring's expression module.

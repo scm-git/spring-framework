@@ -35,6 +35,9 @@ import org.springframework.core.Ordered;
 import org.springframework.util.ClassUtils;
 
 /**
+ * AOP就是通过这个类启用的
+ * (是一个InstantiationAwareBeanPostProcessor, BeanPostProcessor)
+ *
  * {@link org.springframework.aop.framework.autoproxy.AbstractAdvisorAutoProxyCreator}
  * subclass that exposes AspectJ's invocation context and understands AspectJ's rules
  * for advice precedence when multiple pieces of advice come from the same aspect.

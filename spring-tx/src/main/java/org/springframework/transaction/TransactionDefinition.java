@@ -19,6 +19,29 @@ package org.springframework.transaction;
 import org.springframework.lang.Nullable;
 
 /**
+ * 传播行为：
+ * 支持当前事务的传播行为：
+ * 	  1. {@link #PROPAGATION_REQUIRED}
+ * 	  2. {@link #PROPAGATION_SUPPORTS}
+ * 	  3. {@link #PROPAGATION_MANDATORY}
+ * 不支持当前事务的传播行为：
+ * 	  1. {@link #PROPAGATION_REQUIRES_NEW}
+ * 	  2. {@link #PROPAGATION_NOT_SUPPORTED}
+ * 	  3. {@link #PROPAGATION_NEVER}
+ * 其他行为：
+ * 	  1. {@link #PROPAGATION_NESTED}
+ *
+ * 隔离级别：
+ * {@link #ISOLATION_READ_UNCOMMITTED} :  最低的隔离级别, 允许读取未提交的数据，可能发生脏读，幻读，不可重复读
+ * {@link #ISOLATION_READ_COMMITTED} : 允许读取并发事务已经提交的数据，可以防止脏读，但是可能发生幻读和不可重复读
+ * {@link #ISOLATION_REPEATABLE_READ} : 对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以防止脏读和不可重复读，但可能发生幻读
+ * {@link #ISOLATION_SERIALIZABLE} : 串行化，所有事务串行执行，完全不干扰，但是性能最低
+ * {@link #ISOLATION_DEFAULT}: 使用后端数据库默认的隔离级别
+ * 后端数据库默认的隔离级别：
+ * 	 * MySQL: {@link #ISOLATION_REPEATABLE_READ}
+ * 	 * Oracle: {@link #ISOLATION_READ_COMMITTED}
+ *
+ *
  * Interface that defines Spring-compliant transaction properties.
  * Based on the propagation behavior definitions analogous to EJB CMT attributes.
  *
@@ -44,6 +67,9 @@ import org.springframework.lang.Nullable;
 public interface TransactionDefinition {
 
 	/**
+	 * Spring事务的默认传播行为：
+	 * 如果存在就使用当前事务，如果不存在就创建一个事务
+	 *
 	 * Support a current transaction; create a new one if none exists.
 	 * Analogous to the EJB transaction attribute of the same name.
 	 * <p>This is typically the default setting of a transaction definition,
@@ -52,6 +78,8 @@ public interface TransactionDefinition {
 	int PROPAGATION_REQUIRED = 0;
 
 	/**
+	 * 支持在当前事务中执行，如果没有事务就不在事务中执行
+	 *
 	 * Support a current transaction; execute non-transactionally if none exists.
 	 * Analogous to the EJB transaction attribute of the same name.
 	 * <p><b>NOTE:</b> For transaction managers with transaction synchronization,
@@ -73,6 +101,8 @@ public interface TransactionDefinition {
 	int PROPAGATION_SUPPORTS = 1;
 
 	/**
+	 * 在当前事务中执行，如果不存在当前事务就抛出异常，不会自动创建事务
+	 *
 	 * Support a current transaction; throw an exception if no current transaction
 	 * exists. Analogous to the EJB transaction attribute of the same name.
 	 * <p>Note that transaction synchronization within a {@code PROPAGATION_MANDATORY}
@@ -81,6 +111,8 @@ public interface TransactionDefinition {
 	int PROPAGATION_MANDATORY = 2;
 
 	/**
+	 * 创建一个新的事务，如果当前已经存在一个事务A，则挂起事务A
+	 *
 	 * Create a new transaction, suspending the current transaction if one exists.
 	 * Analogous to the EJB transaction attribute of the same name.
 	 * <p><b>NOTE:</b> Actual transaction suspension will not work out-of-the-box
@@ -96,6 +128,8 @@ public interface TransactionDefinition {
 	int PROPAGATION_REQUIRES_NEW = 3;
 
 	/**
+	 * 以非事务方式运行，如果当前存在事务，则把当前事务挂起
+	 *
 	 * Do not support a current transaction; rather always execute non-transactionally.
 	 * Analogous to the EJB transaction attribute of the same name.
 	 * <p><b>NOTE:</b> Actual transaction suspension will not work out-of-the-box
@@ -111,6 +145,8 @@ public interface TransactionDefinition {
 	int PROPAGATION_NOT_SUPPORTED = 4;
 
 	/**
+	 * 以非事务方式执行，如果当前存在事务，则抛出异常
+	 *
 	 * Do not support a current transaction; throw an exception if a current transaction
 	 * exists. Analogous to the EJB transaction attribute of the same name.
 	 * <p>Note that transaction synchronization is <i>not</i> available within a
@@ -119,6 +155,9 @@ public interface TransactionDefinition {
 	int PROPAGATION_NEVER = 5;
 
 	/**
+	 * 如果当前已经存在一个事务A，则创建一个内嵌的事务B，事务B可以独立的提交或者回滚(保存点),
+	 * 如果当前不存在事务，则创建一个事务，类似REQUIRED REQUIRES_NEW ?? TODO
+	 *
 	 * Execute within a nested transaction if a current transaction exists,
 	 * behave like {@link #PROPAGATION_REQUIRED} otherwise. There is no
 	 * analogous feature in EJB.
@@ -133,6 +172,10 @@ public interface TransactionDefinition {
 
 
 	/**
+	 * 使用后端数据库默认的隔离级别：
+	 * MySQL: {@link #ISOLATION_REPEATABLE_READ}
+	 * Oracle: {@link #ISOLATION_READ_COMMITTED}
+	 *
 	 * Use the default isolation level of the underlying datastore.
 	 * All other levels correspond to the JDBC isolation levels.
 	 * @see java.sql.Connection
@@ -140,6 +183,9 @@ public interface TransactionDefinition {
 	int ISOLATION_DEFAULT = -1;
 
 	/**
+	 * 最低的隔离级别
+	 * 允许读取未提交的数据，可能发生脏读，幻读，不可重复读
+	 *
 	 * Indicates that dirty reads, non-repeatable reads and phantom reads
 	 * can occur.
 	 * <p>This level allows a row changed by one transaction to be read by another
@@ -151,6 +197,9 @@ public interface TransactionDefinition {
 	int ISOLATION_READ_UNCOMMITTED = 1;  // same as java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
 
 	/**
+	 * Oracle的默认隔离级别
+	 * 允许读取并发事务已经提交的数据，可以防止脏读，但是可能发生幻读和不可重复读
+	 *
 	 * Indicates that dirty reads are prevented; non-repeatable reads and
 	 * phantom reads can occur.
 	 * <p>This level only prohibits a transaction from reading a row
@@ -160,6 +209,9 @@ public interface TransactionDefinition {
 	int ISOLATION_READ_COMMITTED = 2;  // same as java.sql.Connection.TRANSACTION_READ_COMMITTED;
 
 	/**
+	 * MySQL的默认隔离级别
+	 * 对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以防止脏读和不可重复读，但可能发生幻读
+	 *
 	 * Indicates that dirty reads and non-repeatable reads are prevented;
 	 * phantom reads can occur.
 	 * <p>This level prohibits a transaction from reading a row with uncommitted changes
@@ -171,6 +223,8 @@ public interface TransactionDefinition {
 	int ISOLATION_REPEATABLE_READ = 4;  // same as java.sql.Connection.TRANSACTION_REPEATABLE_READ;
 
 	/**
+	 * 串行化，所有事务串行执行，完全不干扰，但是性能最低
+	 *
 	 * Indicates that dirty reads, non-repeatable reads and phantom reads
 	 * are prevented.
 	 * <p>This level includes the prohibitions in {@link #ISOLATION_REPEATABLE_READ}
@@ -185,6 +239,8 @@ public interface TransactionDefinition {
 
 
 	/**
+	 * 使用默认的超时时间
+	 *
 	 * Use the default timeout of the underlying transaction system,
 	 * or none if timeouts are not supported.
 	 */
@@ -192,6 +248,17 @@ public interface TransactionDefinition {
 
 
 	/**
+	 * 支持当前事务的传播行为：
+	 *   1. {@link #PROPAGATION_REQUIRED}
+	 *   2. {@link #PROPAGATION_SUPPORTS}
+	 *   3. {@link #PROPAGATION_MANDATORY}
+	 * 不支持当前事务的传播行为：
+	 *   1. {@link #PROPAGATION_REQUIRES_NEW}
+	 *   2. {@link #PROPAGATION_NOT_SUPPORTED}
+	 *   3. {@link #PROPAGATION_NEVER}
+	 * 其他行为：
+	 *   1. {@link #PROPAGATION_NESTED}
+	 *
 	 * Return the propagation behavior.
 	 * <p>Must return one of the {@code PROPAGATION_XXX} constants
 	 * defined on {@link TransactionDefinition this interface}.

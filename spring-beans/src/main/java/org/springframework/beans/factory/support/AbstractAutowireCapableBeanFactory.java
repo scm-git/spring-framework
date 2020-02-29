@@ -508,6 +508,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	/**
 	 * args就是工厂方法的参数，或者构造器的参数
 	 *
+	 * getBean -> doGetBean -> getSingleton -> createBean
+	 *
 	 * Central method of this class: creates a bean instance,
 	 * populates the bean instance, applies post-processors, etc.
 	 * @see #doCreateBean
