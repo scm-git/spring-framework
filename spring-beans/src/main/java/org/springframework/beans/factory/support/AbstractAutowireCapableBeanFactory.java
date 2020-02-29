@@ -507,8 +507,35 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 	/**
 	 * args就是工厂方法的参数，或者构造器的参数
-	 *
 	 * getBean -> doGetBean -> getSingleton -> createBean
+	 *
+	 * createBean方法逻辑如下：
+	 * 一. 调用方法{@link #resolveBeforeInstantiation(String, RootBeanDefinition)};
+	 *     返回bean的代理； AOP的关键点
+	 * 	   首次创建bean时不会创建代理对象，因为bean都不存在，没有代理的必要
+	 * 	   所以此步骤只是找出AOP的切面并且放入缓存
+	 *
+	 * 二. 调用doCreateBean方法，该方法逻辑如下：
+	 * 1. createBeanInstance，该方法中会根据情况调用下面其中一个方法来实例化bean:
+	 *    instantiateUsingFactoryMethod: 调用工厂方法 (又是一个及其复杂的方法)
+	 *    autowireConstructor： 调用指定的构造器方法
+	 *    instantiateBean： 调用默认的构造方法
+	 * 2. applyMergedBeanDefinitionPostProcessors，里面调用MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition后置方法
+	 * 3. addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean))，调用此方法，添加到早期对象缓存中，解决循环引用问题
+	 * 4. populateBean(beanName, mbd, instanceWrapper);
+	 *    在此步骤中为bean的属性赋值，解决循环依赖问题
+	 * 5. initializeBean：
+	 *    5.1 调用各种aware接口的方法
+	 *    5.2 调用BeanPostProcessor的postProcessBeforeInitialization方法
+	 * 	  5.3 调用配置的init方法
+	 * 		  5.3.1 调用InitializingBean的afterPropertiesSet方法
+	 * 	      5.3.2 调用自定义的init方法
+	 * 	  5.4 调用BeanPostProcessor的postProcessAfterInitialization方法（此步骤是动态代理的核心步骤）
+	 * 6. registerDisposableBeanIfNecessary(beanName, bean, mbd); TODO
+	 *
+	 * 三. doCreate执行完成后，会返回已经实例化的bean(此时的bean还没有为其属性赋值，比如@Autowired注解的属性)
+	 *    返回的bean也就是此处的singletonObject对象
+	 *
 	 *
 	 * Central method of this class: creates a bean instance,
 	 * populates the bean instance, applies post-processors, etc.
@@ -579,6 +606,24 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	/**
 	 * args就是工厂方法的参数，或者构造器的参数
 	 *
+	 * doCreateBean方法逻辑如下：
+	 * 1. createBeanInstance，该方法中会根据情况调用下面其中一个方法来实例化bean:
+	 *    instantiateUsingFactoryMethod: 调用工厂方法 (又是一个及其复杂的方法)
+	 *    autowireConstructor： 调用指定的构造器方法
+	 *    instantiateBean： 调用默认的构造方法
+	 * 2. applyMergedBeanDefinitionPostProcessors，里面调用MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition后置方法
+	 * 3. addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean))，调用此方法，添加到早期对象缓存中，解决循环引用问题
+	 * 4. populateBean(beanName, mbd, instanceWrapper);
+	 *    在此步骤中为bean的属性赋值，解决循环依赖问题
+	 * 5. initializeBean：
+	 *    5.1 调用各种aware接口的方法
+	 *    5.2 调用BeanPostProcessor的postProcessBeforeInitialization方法
+	 * 	  5.3 调用配置的init方法
+	 * 		  5.3.1 调用InitializingBean的afterPropertiesSet方法
+	 * 	      5.3.2 调用自定义的init方法
+	 * 	  5.4 调用BeanPostProcessor的postProcessAfterInitialization方法（此步骤是动态代理的核心步骤）
+	 * 6. registerDisposableBeanIfNecessary(beanName, bean, mbd); TODO
+	 *
 	 * Actually create the specified bean. Pre-creation processing has already happened
 	 * at this point, e.g. checking {@code postProcessBeforeInstantiation} callbacks.
 	 * <p>Differentiates between default bean instantiation, use of a
@@ -636,11 +681,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			// 添加到早期对象缓存中，解决循环引用问题,
-			// 这三个缓存的添加和移除时机？？ TODO
-			// singletonObjects： 一级缓存
-			// earlySingletonObjects： 二级缓存
-			// singletonFactories： 三级缓存
+			/**
+			 * 添加到早期对象缓存中，解决循环引用问题, 此步骤做如下三件事：
+			 * 1. 将beanName -> singletonFactory 放入三级缓存池中： singletonFactories
+			 * 2. 将beanName从二级缓存中清除： earlySingletonObjects
+			 * 3. 将beanName放入所有已注册的beanName集合中： registerSingletons
+			 * 此处没有操作一级缓存(单例缓存池): singletonObjects
+			 *
+ 			 */
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 

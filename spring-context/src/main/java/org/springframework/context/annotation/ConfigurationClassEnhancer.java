@@ -366,6 +366,15 @@ class ConfigurationClassEnhancer {
 			return resolveBeanReference(beanMethod, beanMethodArgs, beanFactory, beanName);
 		}
 
+		/**
+		 * 处理bean引用
+		 *
+		 * @param beanMethod
+		 * @param beanMethodArgs
+		 * @param beanFactory
+		 * @param beanName
+		 * @return
+		 */
 		private Object resolveBeanReference(Method beanMethod, Object[] beanMethodArgs,
 				ConfigurableBeanFactory beanFactory, String beanName) {
 

@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanCreationNotAllowedException;
 import org.springframework.beans.factory.BeanCurrentlyInCreationException;
@@ -72,12 +73,18 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	/**
 	 * 单例缓存池： 一级缓存
+	 * beanName -> beanInstance
+	 * beanName：是真实名字，去掉了 &(factoryBean) 前缀的，且不是alias名称
+	 * aliasMap会有aliasName(别名) -> beanName(真名)
+	 *
 	 */
 	/** Cache of singleton objects: bean name to bean instance. */
 	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
 	/**
 	 * 暴露早期对象的缓存池: 三级缓存池
+	 * 三级缓存池是： beanName -> ObjectFactory的键值对，而不是beanName -> beanInstance的映射
+	 * 这个ObjectFactory的getObject方法会调用：getEarlyBeanReference方法()({@link AbstractAutowireCapableBeanFactory#getEarlyBeanReference(String, RootBeanDefinition, Object)})
 	 */
 	/** Cache of singleton factories: bean name to ObjectFactory. */
 	private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16);
@@ -88,19 +95,25 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** Cache of early singleton objects: bean name to bean instance. */
 	private final Map<String, Object> earlySingletonObjects = new HashMap<>(16);
 
+	/**
+	 * 所有已注册的beanName集合
+	 */
 	/** Set of registered singletons, containing the bean names in registration order. */
 	private final Set<String> registeredSingletons = new LinkedHashSet<>(256);
 
 	/**
 	 * 当前正在创建的bean名称
-	 * 在创建bean之前会往这个集合中放入这个beanName
+	 * 在{@link #getSingleton(String, ObjectFactory)}方法中：
+	 * 创建开始前会将这个bean放入该集合中，
+	 * 创建完成后又会清除掉
 	 */
 	/** Names of beans that are currently in creation. */
 	private final Set<String> singletonsCurrentlyInCreation =
 			Collections.newSetFromMap(new ConcurrentHashMap<>(16));
 
 	/**
-	 * 创建bean之前，会将beanName放入这个集合中
+	 * 该集合中包含"创建过程中"不需要检查的bean, bean创建时需要检查是否在该集合中，如果在，则抛出异常
+	 * 目前只看到在resolveBeanReference房中有往该集合中添加bean，但是bean创建时({@link #getSingleton(String, ObjectFactory)})方法中有校验
 	 */
 	/** Names of beans currently excluded from in creation checks. */
 	private final Set<String> inCreationCheckExclusions =
@@ -110,6 +123,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	@Nullable
 	private Set<Exception> suppressedExceptions;
 
+	/**
+	 * 销毁所有单例时，该属性为true，目前没看到哪里需要调用销毁逻辑：所以该属性通常都是false
+	 */
 	/** Flag that indicates whether we're currently within destroySingletons. */
 	private boolean singletonsCurrentlyInDestruction = false;
 
@@ -146,6 +162,12 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * singletonFactories: 用于处理循环引用的缓存池
 	 * earlySingletonObjects: 早起暴露对象的缓存池
 	 *
+	 * 此步骤完成如下四件事：
+	 * 1. 将该bean（已经完成所有创建流程）放入单例缓存池(一级缓存池): singletonObjects
+	 * 2. 将该beanName -> ObjectFactory从三级缓存池中清除: singletonFactories
+	 * 3. 将该bean从二级缓存池中清除: earlySingletonObjects
+	 * 4. 将该bean名称放入registeredSingletons中(在之前已经放过一次{@link #addSingletonFactory(String, ObjectFactory)})
+	 *
 	 * Add the given singleton object to the singleton cache of this factory.
 	 * <p>To be called for eager registration of singletons.
 	 * @param beanName the name of the bean
@@ -161,8 +183,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
-	 * 此处将bean放入三级缓存池singletonFactories中，并且清除二级缓存earlySingletonObjects
-	 * 二级缓存earlySingletonObjects在get时放入
+	 * 此步骤做如下三件事：
+	 * 1. 将beanName -> singletonFactory 放入三级缓存池中： singletonFactories
+	 * 2. 将beanName从二级缓存中清除： earlySingletonObjects
+	 * 3. 将beanName放入所有已注册的beanName集合中： registerSingletons
 	 *
 	 * Add the given singleton factory for building the specified singleton
 	 * if necessary.
@@ -213,9 +237,33 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			synchronized (this.singletonObjects) {
 				singletonObject = this.earlySingletonObjects.get(beanName);
+				// 如果从二级缓存获取到了，就直接返回，否则继续查找三级缓存
 				if (singletonObject == null && allowEarlyReference) {
+					// 执行到此处，说明二级缓存没有获取到提前暴露的对象，继续查找三级缓存，如果三级缓存能查找到，就取出，并放入二级缓存中，清除三级缓存
 					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 					if (singletonFactory != null) {
+						/**
+						 * 只有出现循环引用时，才会走到这一处逻辑：（A -> B, B -> A）
+						 *
+						 * 此处的singletonFactory.getObject()会调用： {@link AbstractAutowireCapableBeanFactory#getEarlyBeanReference(String, RootBeanDefinition, Object)}
+						 * 在lambda中定义, 查看{@link AbstractAutowireCapableBeanFactory#doCreateBean(String, RootBeanDefinition, Object[])}方法
+						 * 这个方法最神奇的地方在于：
+						 * 1. 如果你程序启用了AOP，且你引用的对象需要被AOP切面拦截，那么此处会为这个对象创建一个代理对象(JDKDynamicProxy/CGLIB)
+						 * 2. 以及你自己定义的一些SmartInstantiationAwareBeanPostProcessor(BeanPostProcessor的子接口)想要针对这个bean完成的事情，可以在此步骤完成；
+						 * 因为AbstractAutowireCapableBeanFactory.getEarlyBeanReference方法调用了所有SmartInstantiationAwareBeanPostProcessor的getEarlyBeanReference方法
+						 * 比如：AbstractAutoProxyFactory.getEarlyBeanReference
+						 *
+						 * 如果AOP中定义的切入点会拦截A或者B， 那么此处就会为他们生成代理
+						 * 对于没有循环引用问题的bean，如果也会被AOP拦截，那么不会在此处创建代理对象,
+						 * 会在doCreateBean中的initializeBean中调用BeanPostProcessor的postProcessAfterInitialization方法
+						 * initializeBean在populateBean之后，而循环引用问题需要在调用populateBean里面就要处理，所以这里是对循环引用bean提前处理了代理对象问题
+						 *
+						 * 处理完成后，处理如下缓存：
+						 * 1. 将bean放入二级缓存earlySingletonObjects (bean创建完成后会再次清除二级缓存)
+						 *    此处放入二级缓存后，如果还有C依赖A，那么此时A已经在二级缓存中，不需要再次对A进行此处处理，C就可以直接拿到A的早起暴露对象了 （A -> B, B -> A, B -> C, C -> A） (A -> B, A -> C, B -> A, C -> A)
+						 * 2. 清除三级缓存：singletonFactories
+						 *
+						 */
 						singletonObject = singletonFactory.getObject();
 						this.earlySingletonObjects.put(beanName, singletonObject);
 						this.singletonFactories.remove(beanName);
@@ -227,14 +275,59 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
-	 * 1. 从缓存中获取，如果能获取到，直接返回对象
+	 * 1. 从单例缓存池中获取，如果能获取到，直接返回对象
+	 *
 	 * 2. 如果没有获取到，则执行该bean的实例化逻辑：
 	 *    2.1 beforeSingletonCreation(beanName);
-	 *        该方法将正在创建的bean放入inCreationCheckExclusions和singletonsCurrentlyInCreation集合中；表示正在创建，创建完成后在2.3步移除
-	 *    2.2 singletonFactory.getObject(); // 非常复杂的一处逻辑，详情看方法内部注释
-	 *    2.3 afterSingletonCreation(beanName); // 创建完成，移除2.1步放入创建标记池中的beanName
-	 *    2.4 addSingleton(beanName, singletonObject); 将新创建的实例放入单例缓存池中
-	 *        {@link #addSingleton(String, Object)}
+	 *        该方法将正在创建的bean放入singletonsCurrentlyInCreation集合中(表示正在创建，创建完成后在2.3步移除)
+	 *        并且校验inCreationCheckExclusions集合中是否包含该bean
+	 *        如果singletonsCurrentlyInCreation中已存在，且inCreationCheckExclusions中不存在，则抛出异常(bean已经在创建过程中，不需要再次进入创建流程)
+	 *
+	 *    2.2 singletonFactory.getObject(); // 非常复杂的一处逻辑
+	 *        此步骤完成bean的实例化操作，里面调用了doGetBean中lambda定义的createBean方法，链接如下：
+	 *  	   {@link AbstractAutowireCapableBeanFactory#createBean(String, RootBeanDefinition, Object[])}
+	 * 		   createBean方法逻辑如下：
+	 * 		   一. 调用方法{@link AbstractAutowireCapableBeanFactory#resolveBeforeInstantiation(String, RootBeanDefinition)};
+	 * 		       返回bean的代理； AOP的关键点
+	 * 		   	   首次创建bean时不会创建代理对象，因为bean都不存在，没有代理的必要
+	 * 		   	   所以此步骤只是找出AOP的切面并且放入缓存
+	 *
+	 * 		   二. 调用doCreateBean方法({@link AbstractAutowireCapableBeanFactory#doCreateBean(String, RootBeanDefinition, Object[])}),
+	 *	   		   该方法逻辑如下：
+	 *	   		   1. createBeanInstance，该方法中会根据情况调用下面其中一个方法来实例化bean:
+	 *	   		      * instantiateUsingFactoryMethod: 调用工厂方法 (又是一个及其复杂的方法)
+	 *	   		      * autowireConstructor： 调用指定的构造器方法
+ 	 *	   		      * instantiateBean： 调用默认的构造方法
+	 * 		       2. applyMergedBeanDefinitionPostProcessors，里面调用MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition后置方法
+	 * 		       3. addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean))，调用此方法，添加到早期对象缓存中，解决循环引用问题，链接如下：
+	 * 		          {@link #addSingletonFactory(String, ObjectFactory)}, 此步骤完成如下三件事：
+	 * 		          3.1 放入三级缓存池： singletonFactories.put(beanName, singletonFactory)
+	 * 		              三级缓存中的ObjectFactory.getObject方法就是调用:getEarlyBeanReference(beanName, mbd, bean)方法: 链接如下：
+	 * 		              {@link AbstractAutowireCapableBeanFactory#getEarlyBeanReference(String, RootBeanDefinition, Object)}
+	 * 		              此时三级缓存中已经有该beanName -> ObjectFactory的键值对
+	 * 	              3.2 清除二级缓存： earlySingletonObjects.remove(beanName)
+	 * 	              3.3 放入已注册beanName集合： registerSingletons.add(beanName)
+	 * 		       4. populateBean(beanName, mbd, instanceWrapper); {@link AbstractAutowireCapableBeanFactory#populateBean(String, RootBeanDefinition, BeanWrapper)}
+	 * 		          在此步骤中为bean的属性赋值，解决循环依赖问题
+	 * 		       5. initializeBean：
+	 * 		          5.1 调用各种aware接口的方法
+	 * 		          5.2 调用BeanPostProcessor的postProcessBeforeInitialization方法
+	 * 		   	      5.3 调用配置的init方法
+	 * 		   		      5.3.1 调用InitializingBean的afterPropertiesSet方法
+	 * 		   	          5.3.2 调用自定义的init方法
+	 * 		   	      5.4 调用BeanPostProcessor的postProcessAfterInitialization方法（此步骤是动态代理的核心步骤）
+	 8 		       6. registerDisposableBeanIfNecessary(beanName, bean, mbd); TODO
+	 *
+	 * 		   三. doCreate执行完成后，会返回已经实例化的bean(此时的bean还没有为其属性赋值，比如@Autowired注解的属性)
+	 *
+	 *    2.3 afterSingletonCreation(beanName); // 创建完成，移除2.1步放入创建标记池(singletonsCurrentlyInCreation)中的beanName
+	 *
+	 *    2.4 addSingleton(beanName, singletonObject); 将新创建的实例放入单例缓存池中, 链接：{@link #addSingleton(String, Object)}
+	 *        此步骤完成如下四件事：
+	 * 	      1. 放入单例缓存池，也就是一级缓存池（将该bean已经完成所有创建流程）: singletonObjects
+	 * 	      2. 清除三级缓存池: singletonFactories.remove(beanName)
+	 * 	      3. 清除二级缓存池：earlySingletonObjects.remove(beanName)
+	 * 	      4. 放入已注册beanName集合： registerSingletons.add(beanName) (已经在2.2步中的二.3.3中放过一次)
 	 *
 	 *
 	 * Return the (raw) singleton object registered under the given name,
@@ -247,8 +340,16 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(beanName, "Bean name must not be null");
 		synchronized (this.singletonObjects) {
+			/**
+			 * 1.
+			 * 首先从单例缓存池中获取对象(一级缓存)，bean的首次创建不会获取到，因为bean还没有创建出来，创建出来且未属性赋值后会放入这个缓存池中
+			 * 没有获取到，则进入创建逻辑(if语句块中)
+			 */
 			Object singletonObject = this.singletonObjects.get(beanName);
 			if (singletonObject == null) {
+				/**
+				 * 如果正在销毁所有已创建的代理，抛出异常，通常不会进入这if语句块
+				 */
 				if (this.singletonsCurrentlyInDestruction) {
 					throw new BeanCreationNotAllowedException(beanName,
 							"Singleton bean creation not allowed while singletons of this factory are in destruction " +
@@ -257,7 +358,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				// 将正在创建的bean放入inCreationCheckExclusions和singletonsCurrentlyInCreation集合中
+				/**
+				 * 2.1
+				 * 将正在创建的bean放入singletonsCurrentlyInCreation集合中，如果集合中已经存在，则抛出异常（说明该bean已经在创建流程中）
+ 				 */
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
 				boolean recordSuppressedExceptions = (this.suppressedExceptions == null);
@@ -272,7 +376,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					 * 一. 调用方法resolveBeforeInstantiation(beanName, mbdToUse);
 					 *     返回bean的代理； AOP的关键点
 					 * 	   首次创建bean时不会创建代理对象，因为bean都不存在，没有代理的必要
-					 * 	   找出AOP的切面并且缓存起来
+					 * 	   所以此步骤只是找出AOP的切面并且放入缓存
 					 *
 					 * 二. 调用doCreateBean方法，该方法逻辑如下：
 					 * 1. createBeanInstance，该方法中会根据情况调用下面其中一个方法来实例化bean:
@@ -320,6 +424,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (recordSuppressedExceptions) {
 						this.suppressedExceptions = null;
 					}
+					/**
+					 * bean创建完成，将bean移除singletonsCurrentlyInCreation集合
+					 */
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {

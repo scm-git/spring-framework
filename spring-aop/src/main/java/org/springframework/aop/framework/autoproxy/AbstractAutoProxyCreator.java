@@ -330,6 +330,11 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
 		if (bean != null) {
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			/**
+			 * 此处有一个remove操作，因为在getEarlyBeanReference的时候会put beanName -> bean 到earlyProxyReferences中去
+			 * 而getEarlyBeanReference就已经对bean做了一次wrapInfNecessary处理(如果需要(有切入点拦截该bean时)就为该bean创建代理对象)
+			 * 所以，此处如果发现移除的bean != 现在的bean才创建，如果是就不用创建了，因为getEarlyBeanReference中已经创建过该代理对象
+			 */
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}

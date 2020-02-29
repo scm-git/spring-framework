@@ -170,6 +170,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	@Nullable
 	private SecurityContextProvider securityContextProvider;
 
+	/**
+	 * 缓存已经合并了父级beanDefinition属性的beanDefinition:
+	 * 有些bean会extends一个parentBean;
+	 */
 	/** Map from bean name to merged RootBeanDefinition. */
 	private final Map<String, RootBeanDefinition> mergedBeanDefinitions = new ConcurrentHashMap<>(256);
 
@@ -233,6 +237,34 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 	/**
 	 * args就是工厂方法的参数，或者构造器的参数
+	 * 入参说明：
+	 * name：入参名称
+	 *
+	 * 步骤如下：
+	 * 1. 根据name获取真实名称beanName: name是传入的名称，可能有"&"前缀，或者是一个别名，
+	 *    因此这一步获取的beanName：就是去掉了&,且查找了aliasMap之后得到的真实的bean名称
+	 *
+	 * 2. 从单例缓存池中获取bean，如果能获取到，说明bean已经创建了，直接可以拿到，不走else中的实例化逻辑，直接返回
+	 * 	  第一次进入时，还没有进入创建bean流程，因此会进入else语句块；
+	 * 	  else 语句块就是bean的实例化相关逻辑，也就是下面的第3步：
+	 *
+	 * 3. 进入bean的创建流程：
+	 *    1. 校验创建中的bean是否为prototype类型，详细看方法中的3.1说明
+	 *    2. 查看该bean的beanDefinition是否存在，如果不存在会继续查找父级beanFactory(父级beanFactory存在时)
+	 *    3. 将该beanName放入alreadyCreated(一个Set)集合中, 如果创建失败，会从集合中清除，成功就让其留在该集合中
+	 *    4. 获取beanDefinition, 并且合并父beaDefinition属性(有些bean会继承parent bean)
+	 *    5. 校验获取到的beanDefinition是否为abstract，如果是就抛出异常，此处说明abstract的bean是不能实例化的
+	 *    6. 处理bean的DependsOn属性(可能是@DependsOn这样的注解)，如果存在，首先校验是否存在循环依赖，如果不存在，则首先创建依赖的bean
+	 *       创建依赖的bean时会再次调用getBean(dependsBean)方法，从而会首先进入dependsBean的创建流程，因此当前bean的创建会等dependsBean创建完成
+	 *       如果存在循环依赖，则抛出异常
+	 *    7. 进入创建bean流程：前面都是在做准备工作
+	 *       7.1 创建单例bean: {@link AbstractAutowireCapableBeanFactory#getSingleton(String, ObjectFactory)}
+	 *       7.2 创建原型bean
+	 *       7.3 创建其他scope的bean: request/session
+	 *    8. 如果4-7的步骤中有异常抛出(因为try catch语句块包括4-7步)，说明bean创建失败，将该bean从alreadyCreated集合中删除
+	 *
+	 * 4. 查看获取bean是否需要转换为相应的类型：
+	 *
 	 *
 	 * Return an instance, which may be shared or independent, of the specified bean.
 	 * @param name the name of the bean to retrieve
@@ -248,13 +280,18 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredType,
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
-		// 查找bean的真名
+		/**
+		 * 1. 根据入参name查找bean的真实名称：beanName
+		 */
 		final String beanName = transformedBeanName(name);
 		Object bean;
 
-		// 从单例缓存池中获取bean，如果能获取到，说明bean已经创建了，直接可以拿到，不走else中的实例化逻辑，直接返回
-		// 第一次进入时，还没有进入创建bean流程，因此会进入else语句块；
-		// else 语句块就是bean的实例化相关逻辑
+		/**
+		 * 2.
+		 * 从单例缓存池中获取bean，如果能获取到，说明bean已经创建了，直接可以拿到，不走else中的实例化逻辑，直接返回
+		 * 第一次进入时，还没有进入创建bean流程，因此会进入else语句块；
+		 * else 语句块就是bean的实例化相关逻辑
+		 */
 		// Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
@@ -272,14 +309,31 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 
 		else {
+			/**
+			 * 3.
+			 * 上面一步从单例缓存池中没有获取到bean，进入bean的创建流程，这个过程非常的复杂：
+			 *
+			 */
+
+
+			/**
+			 * 3.1 查看当前创建的bean是否是一个已经在创建过程中的prototype类型的bean
+			 * 如果创建的是一个非单例的bean(prototype或者request/session scope)，创建之前会调用{@link #beforePrototypeCreation(String)}方法，暂时叫这个bean为A
+			 * 创建之前(调用createBean之前)会将A放入prototypesCurrentlyInCreation(ThreadLocal线程变量)中，如果创建过程中发现引用了B，那么会递归调用B的创建流程getBean(B)，如果B又引用了A(也就是循环引用 A -> B, B -> A)，
+			 * 那么再次调用getBean(A)，这时就会校验到A已经在prototypesCurrentlyInCreation这个变量中，那么抛出异常
+			 * 因为非单例的bean是不会缓存的，更不会提前暴露，所以无法处理循环引用问题，所以此处抛出异常，否则会永远递归下去，最后栈溢出
+			 *
+			 */
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
-			// 判断父级beanFactory不为空，并且当前beanFactory没有这个bean时，才进入下面这个if语句块
-			// 也就是说，如果当前beanFactory已经包含了，就不会查找父级beanFactory
+			/**
+			 * 3.2 判断父级beanFactory不为空，并且当前beanFactory没有这个bean时，才进入下面这个if语句块
+			 * 也就是说，如果当前beanFactory已经包含了，就不会查找父级beanFactory
+			 */
 			// Check if bean definition exists in this factory.
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
@@ -302,20 +356,37 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
+			/**
+			 * 3.3 获取factoryBean类型的时候，typeCheckOnly才为true, 也就是说获取factoryBean类型时不会将beanName放入alreadyCreated集合
+			 * 查看：{@link #getTypeForFactoryBean(String, RootBeanDefinition, boolean)}
+			 */
 			if (!typeCheckOnly) {
+				/**
+				 * 将正在创建的bean放入alreadyCreated(一个Set)集合中
+				 */
 				markBeanAsCreated(beanName);
 			}
 
 			try {
-				// 获取合并后的beanDefinition（自己和父级beanDefinition）
-				// 1. 首先会从缓存中获取，
-				// 2. 缓存没有获取到，再去合并父级BeanDefinition和当前BeanDefinition
+				/**
+				 * 3.4 获取合并后的beanDefinition（自己和父级beanDefinition）
+				 *  1. 首先会从缓存中获取，
+				 *  2. 缓存没有获取到，再去合并父级BeanDefinition和当前BeanDefinition
+				 */
 				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
-				// 校验合并后的beanDefinition是否是一个abstractBean，如果是，直接抛出异常； 不能获取abstract的bean
+				/**
+				 * 3.5 校验合并后的beanDefinition是否是一个abstractBean，如果是，直接抛出异常； 不能获取abstract的bean
+				 */
 				checkMergedBeanDefinition(mbd, beanName, args);
 
-				// 根据@DependsOn注解，先创建@DependsOn中指定的bean
-				// 如果bean之间出现相互依赖，会报异常BeanCreationException
+				/**
+				 * 3.6 根据@DependsOn注解，先创建@DependsOn中指定的bean
+				 * 如果bean之间出现相互依赖，会报异常BeanCreationException
+				 *
+				 * dependsOn就是当前bean需要依赖的其他bean，例如下面的就是{"beanA", "beanB"}数组:
+				 * @Dependson(value = {"beanA", "beanB})
+				 *
+ 				 */
 				// Guarantee initialization of beans that the current bean depends on.
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
@@ -338,13 +409,18 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					}
 				}
 
-				// 创建bean实例:
-				// 分为单例bean和原型bean
+				/**
+				 * 3.7 此处开始创建bean:
+				 *   1. 单实例bean:
+				 *   2. 原型bean:
+				 *   3. 创建其他scope的bean：request/session
+				 */
 				// Create bean instance.
 				if (mbd.isSingleton()) {
 					//
 					/**
 					 * 创建bean,并加入单例缓冲池, 此处的逻辑非常复杂，详见方法上的注释说明
+					 * getSingleton在其子类中实现：
 					 * {@link AbstractAutowireCapableBeanFactory#getSingleton(String, ObjectFactory)}
 					 */
 					sharedInstance = getSingleton(beanName, () -> {
@@ -378,6 +454,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 
 				else {
+					// 其他scope类型
 					String scopeName = mbd.getScope();
 					final Scope scope = this.scopes.get(scopeName);
 					if (scope == null) {
@@ -405,12 +482,20 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 			catch (BeansException ex) {
+				/**
+				 * 3.8
+				 * 创建bean抛出异常，说明创建失败，将创建表示从alreadyCreated集合中删除，
+				 * 进入创建流程时，会向该集合中放入正在创建的bean名称: beanName;
+				 * 创建成功就不会删除，让beanName留在alreadyCreated(是一个Set)集合中
+				 */
 				cleanupAfterBeanCreationFailure(beanName);
 				throw ex;
 			}
 		}
 
-		// 校验bean是否为指定的类型， 类似getBean(name, XXX.class)
+		/**
+		 * 4. 校验bean是否为指定的类型， 类似getBean(name, XXX.class)
+		 */
 		// Check if required type matches the type of the actual bean instance.
 		if (requiredType != null && !requiredType.isInstance(bean)) {
 			try {

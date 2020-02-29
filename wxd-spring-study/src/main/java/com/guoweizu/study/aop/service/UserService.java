@@ -4,10 +4,15 @@ import com.guoweizu.study.aop.annotation.LogInput;
 import com.guoweizu.study.aop.annotation.LogInputAndOutput;
 import com.guoweizu.study.aop.annotation.LogOutput;
 import org.springframework.aop.framework.AopContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserService implements IUserService{
+
+	@Autowired
+	IOrderService orderService;
+
 	@LogInput
 	public void printName(String name) {
 		System.out.println("user.name:"  + name);

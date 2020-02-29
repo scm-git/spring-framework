@@ -1,6 +1,7 @@
 package com.guoweizu.study;
 
 
+import com.guoweizu.study.aop.service.IOrderService;
 import com.guoweizu.study.aop.service.IUserService;
 import com.guoweizu.study.aop.service.UserService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -32,6 +33,9 @@ public class IocStudyStartup {
 		System.out.println("=============4结束===============\n");
 		userService.goHome();
 		System.out.println("=============4结束===============\n");
+
+		IOrderService orderService = annotationConfigApplicationContext.getBean("orderService", IOrderService.class);
+		orderService.purchase("苹果");
 
 		FooService fooService = annotationConfigApplicationContext.getBean("fooService", FooService.class);
 		fooService.foo();
