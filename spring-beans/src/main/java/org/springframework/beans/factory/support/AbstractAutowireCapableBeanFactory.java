@@ -402,11 +402,23 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * 初始化之前调用BeanPostProcessor.postProcessBeforeInitialization方法，对所有的bean进行init方法之前的处理
+	 * "实例化之后初始化之前"调用BeanPostProcessor.postProcessBeforeInitialization方法，对所有的bean进行init方法之前的处理
 	 * {@link #applyBeanPostProcessorsBeforeInitialization(Object, String)}  -- 在{@link #doCreateBean(String, RootBeanDefinition, Object[])}方法中调用，
-	 * 且bean已经完成实例化，并且设置了属性之后调用，在doCreateBean中调用的{@link #initializeBean(String, Object, RootBeanDefinition)}方法中调用
+	 * 且bean已经完成实例化，并且设置了属性(populateBean)之后调用，在doCreateBean中调用的{@link #initializeBean(String, Object, RootBeanDefinition)}方法中调用
 	 *
-	 * 这个方法没有什么逻辑
+	 * 另外ApplicationContextAware等Aware接口也就是在这里设置的，关于ApplicationContextAware设置context的说明如下：
+	 * 如果bean实现了ApplicationContextAware接口：
+	 * 1. 在AbstractApplicationContext.refresh()的第三步prepareBeanFactory中，注册了2-3个BeanPostProcessor, 其中一个就是ApplicationContextAwareProcessor，
+	 *    注册这个processor时调用public ApplicationContextAwareProcessor(ConfigurableApplicationContext applicationContext)构造方法
+	 *    其中入参applicationContext就是传入的this，也就是调用者自己
+	 * 2. 如果自己的bean实现了ApplicationContextAware接口，肯定就会实现setApplicationContext(applicationContext)方法；
+	 * 3. 所以此处调用getBeanPostProcessors()时就能获取到这个这个processor，然后执行processor的postProcessAfterInstantiation方法：
+	 * 4. 查看该方法，可以看到：((ApplicationContextAware) bean).setApplicationContext(this.applicationContext);
+	 *    该方法的入参是this.applicationContext,而这个就是在步骤1中传入的this对象；所以此处就注入了应用中的applicationContext到自己的bean中
+	 * 参见：
+	 * {@link org.springframework.context.support.ApplicationContextAwareProcessor}
+	 * {@link org.springframework.context.support.AbstractApplicationContext#prepareBeanFactory(ConfigurableListableBeanFactory)}
+	 * {@link org.springframework.context.ApplicationContextAware}
 	 *
 	 * @param existingBean the existing bean instance
 	 * @param beanName the name of the bean, to be passed to it if necessary
@@ -1930,6 +1942,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 
 	/**
+	 * doCreateBean中调用此方法，在populateBean之后调用此方法，此方法步骤如下：
+	 * 1. initAwareMethods，该方法完成以下三个Aware设置： {@link #invokeAwareMethods(String, Object)}
+	 *    BeanNameAware
+	 *    BeanFactoryAware
+	 *    BeanClassLoaderAware
+	 * 2. applyBeanPostProcessorsBeforeInitialization， 这个方法调用所有BeanPostProcessor的before方法， {@link #applyBeanPostProcessorsBeforeInitialization(Object, String)}
+	 *    包括实现了ApplicationContextAware接口的bean设置applicationContext, 以及其他的一些Aware接口的设置
+	 * 3. invokeInitMethods, 调用实现了InitializingBean接口的afterPropertiesSet方法，以及@Bean中定义的initMethodName方法
+	 * 4. applyBeanPostProcessorsAfterInitialization
+	 *    调用所有BeanPostProcessor的postProcessAfterInitialization方法
+	 * 	  动态代理的核心步骤；AOP及事务就是在此步骤创建动态代理对象的: AbstractAutoProxyCreator
+	 *
 	 * Initialize the given bean instance, applying factory callbacks
 	 * as well as init methods and bean post processors.
 	 * <p>Called from {@link #createBean} for traditionally defined beans,
@@ -1955,14 +1979,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		else {
 
-			// ApplicationContextAware?? TODO
+			// 此处调用了三个Aware接口
 			invokeAwareMethods(beanName, bean);
 		}
 
 		Object wrappedBean = bean;
 		if (mbd == null || !mbd.isSynthetic()) {
 			/**
-			 * 调用所有BeanPostProcessor的postProcessBeforeInitialization方法，这步没有什么业务逻辑
+			 * 调用所有BeanPostProcessor的postProcessBeforeInitialization方法，
+			 * 包括调用ApplicationContextAware的setApplicationContext方法，以及一些其他Aware接口方法
+			 * ApplicationContextAwareProcessor -- 在refresh第三步注册
+			 * ApplicationListenerDetector  -- 在refresh第三步注册
+			 * ImportAwareBeanPostProcessor -- 在第五步ConfigurationClassPostProcessor扫描BeanDefinition时注册
 			 */
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
