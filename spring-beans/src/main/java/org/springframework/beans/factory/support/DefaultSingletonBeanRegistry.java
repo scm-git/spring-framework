@@ -263,6 +263,19 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 						 *    此处放入二级缓存后，如果还有C依赖A，那么此时A已经在二级缓存中，不需要再次对A进行此处处理，C就可以直接拿到A的早起暴露对象了 （A -> B, B -> A, B -> C, C -> A） (A -> B, A -> C, B -> A, C -> A)
 						 * 2. 清除三级缓存：singletonFactories
 						 *
+						 * 示例说明：
+						 * 如果存在(A -> B, B -> A)循环引用，而且@EnableAspectJAutoProxy，并且有切入点拦截A，B的时候：
+						 * 那么流程如下：
+						 * getBean(A) -> 发现依赖B -> getBean(B) -> 发现依赖A -> getBean(A)：
+						 * 此时可以从三级缓存中拿到A的objectFactory：
+						 * objectFactory.getObject -> getEarlyBeanReference() -> SmartInstantiationAwareBeanPostProcessor.getEarlyBeanReference()
+						 * 而启用AOP注册的：AnnotationAwareAspectJAutoProxyCreator就是这种类型的后置处理器，其父类AspectAutoProxyCreator的getEarlyBeanReference里面最后一行是: return wrapIfNecessary(...)
+						 * 所以：此处已经提前创建了A的代理对象，返回的是A的代理，而不是真正的A实例了， 赋值给B的就是A的代理；二级缓存中也就是A的代理
+						 * 如果还有其他的C,D,E依赖A，那么可以直接从二级缓存获取A的代理了
+						 * 所以二级缓存和三级缓存都是必要的
+						 * 并且getEarlyBeanReference()方法会将A放入earlyProxyReferences缓存，
+						 * 后面执行到postProcessAfterInitialization的时候会判断缓存，如果A在缓存中，那么就不会再执行wrapIfNecessary了
+						 *
 						 */
 						singletonObject = singletonFactory.getObject();
 						this.earlySingletonObjects.put(beanName, singletonObject);
@@ -282,6 +295,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 *        该方法将正在创建的bean放入singletonsCurrentlyInCreation集合中(表示正在创建，创建完成后在2.3步移除)
 	 *        并且校验inCreationCheckExclusions集合中是否包含该bean
 	 *        如果singletonsCurrentlyInCreation中已存在，且inCreationCheckExclusions中不存在，则抛出异常(bean已经在创建过程中，不需要再次进入创建流程)
+	 *        如果是通过构造器进行依赖注入，那么如果出现循环依赖问题，此处就会抛出异常
 	 *
 	 *    2.2 singletonFactory.getObject(); // 非常复杂的一处逻辑
 	 *        此步骤完成bean的实例化操作，里面调用了doGetBean中lambda定义的createBean方法，链接如下：
@@ -361,6 +375,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				/**
 				 * 2.1
 				 * 将正在创建的bean放入singletonsCurrentlyInCreation集合中，如果集合中已经存在，则抛出异常（说明该bean已经在创建流程中）
+				 * 如果是通过构造器进行依赖注入，那么如果出现循环依赖问题，此处就会抛出异常
  				 */
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
