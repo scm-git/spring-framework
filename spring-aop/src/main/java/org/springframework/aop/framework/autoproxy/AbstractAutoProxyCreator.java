@@ -286,6 +286,11 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		 * spring容器启动时，refresh第十一步会创建所有的bean，其实是调用的getBean来触发的创建
 		 * 但是第一次进入getBean方法时，就会调用到此方法，这时bean还没有创建，因此后面这段代码在第一次时不会执行
 		 * 所以第一次只执行了前面的代码，前面的代码就是找出了Advisor并且放入缓存中
+		 *
+		 * 下面这段代码粗略的看了一下，大概逻辑如下：
+		 * 如果应用中定义了TargetSourceCreator，保存在customTargetSourceCreators数组中，
+		 * 这个方法好像是用来处理自己创建bean，而不是由spring创建bean
+		 *
 		 */
 		// Create proxy here if we have a custom TargetSource.
 		// Suppresses unnecessary default instantiation of the target bean:

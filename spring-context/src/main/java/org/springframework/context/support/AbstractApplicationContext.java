@@ -626,6 +626,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// 11. Instantiate all remaining (non-lazy-init) singletons.
 				finishBeanFactoryInitialization(beanFactory);
 
+				/**
+				 * eureka的启动入口
+				 */
 				// 12. Last step: publish corresponding event.
 				finishRefresh();
 			}

@@ -548,6 +548,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * 三. doCreate执行完成后，会返回已经实例化的bean(此时的bean还没有为其属性赋值，比如@Autowired注解的属性)
 	 *    返回的bean也就是此处的singletonObject对象
 	 *
+	 * 注意以下四个方法的执行顺序：
+	 * 1. postProcessBeforeInstantiation -- AOP关键步骤： 找出所有切面并缓存在creator中
+	 * 2  populateBean -- {postProcessAfterInstantiation} -- 在populateBean中调用
+	 * 3. postProcessBeforeInitialization -- 调用ApplicationContextAwareProcessor方法设置applicationContext, ImportAwareBeanPostProcessor等的before方法
+	 *    invokeInitMethods
+	 * 4. postProcessAfterInitialization -- AOP关键步骤： 为bean创建代理对象; 另外Scheduled定时任务也在此步骤做了逻辑处理，后续继续深挖定时任务源码 TODO
+	 *
+	 * 所以两个instantiation先调用，然后再是initialization
 	 *
 	 * Central method of this class: creates a bean instance,
 	 * populates the bean instance, applies post-processors, etc.
@@ -1224,7 +1232,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 	/**
 	 * Spring AOP的关键方法
-	 * 在{@link #createBean(String, RootBeanDefinition, Object[])}中调用，在doCreateBean之前调用
+	 * 在{@link #createBean(String, RootBeanDefinition, Object[])}中调用，在doCreateBean之前调用;
+	 *
 	 *
 	 * Apply before-instantiation post-processors, resolving whether there is a
 	 * before-instantiation shortcut for the specified bean.
@@ -1244,6 +1253,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {
+					/**
+					 * 此处通常是不会返回bean，好像是有自己创建的bean(而不是由spring创建的时候才会返回)才会返回bean对象，否则都返回null
+					 * 如果有自己创建的bean，那么此处会再执行afterInitialization方法，为该自定义的bean创建代理对象(如果需要的话)
+					 */
 					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
 					if (bean != null) {
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
