@@ -67,7 +67,13 @@ public class BeanFactoryAdvisorRetrievalHelper {
 	 * @see #isEligibleBean
 	 */
 	public List<Advisor> findAdvisorBeans() {
-		// 1.查看缓存中是否有Advisor
+		/**
+		 * 1. 获取缓存中的advisor
+		 * 2. 第一次进入时缓存中没有，就从beanFactory中获取所有Advisor.class类型的bean，此处可以获取到事务的Advisor
+		 *    事务Advisor就是BeanFactoryTransactionTransactionAttributeSourceAdvisor， 在@EnableTransactionManagement中引入注册的
+		 * 3. 如果缓存中能获取到，就不再重复查找了
+		 *
+		 */
 		// Determine list of advisor bean names, if not cached already.
 		String[] advisorNames = this.cachedAdvisorBeanNames;
 		if (advisorNames == null) {
@@ -82,6 +88,10 @@ public class BeanFactoryAdvisorRetrievalHelper {
 			return new ArrayList<>();
 		}
 
+		/**
+		 * 此处其实可以缓存所有已注册的Advisor类型的bean，不用每次都通过for循环来判断，虽然程序中的Advisor不会太多 TODO
+		 * 因为每个bean的过程都需要经过这段逻辑
+		 */
 		List<Advisor> advisors = new ArrayList<>();
 		for (String name : advisorNames) {
 			if (isEligibleBean(name)) {

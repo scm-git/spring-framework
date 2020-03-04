@@ -512,13 +512,20 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 				proxyFactory.setProxyTargetClass(true);
 			}
 			else {
+				/**
+				 * 查看该类的接口是否存在，存在就添加到proxyFactory中，不存在就设置proxyTargetClass属性为true(使用CGLIB)
+				 */
 				evaluateProxyInterfaces(beanClass, proxyFactory);
 			}
 		}
 
 		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+		/**
+		 * 添加advisor到proxyFactory中
+		 */
 		proxyFactory.addAdvisors(advisors);
 		proxyFactory.setTargetSource(targetSource);
+		// 预留实现，
 		customizeProxyFactory(proxyFactory);
 
 		proxyFactory.setFrozen(this.freezeProxy);

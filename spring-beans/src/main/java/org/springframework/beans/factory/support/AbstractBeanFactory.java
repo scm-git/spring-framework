@@ -423,7 +423,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					 * getSingleton在其子类中实现：
 					 * {@link AbstractAutowireCapableBeanFactory#getSingleton(String, ObjectFactory)}
 					 */
-					sharedInstance = getSingleton(beanName, () -> {
+ 					sharedInstance = getSingleton(beanName, () -> {
 						try {
 							return createBean(beanName, mbd, args);
 						}
