@@ -74,9 +74,10 @@ public class AspectMetadata implements Serializable {
 
 
 	/**
+	 *
 	 * Create a new AspectMetadata instance for the given aspect class.
-	 * @param aspectClass the aspect class
-	 * @param aspectName the name of the aspect
+	 * @param aspectClass the aspect class；；  bean的Type，即bean的.class值
+	 * @param aspectName the name of the aspect ；； 也就是beanName
 	 */
 	public AspectMetadata(Class<?> aspectClass, String aspectName) {
 		this.aspectName = aspectName;

@@ -400,6 +400,9 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 		}
 
 		if (numUnboundArgs > 0) {
+			/**
+			 * 绑定参数名称和值
+			 */
 			// need to bind arguments by name as returned from the pointcut match
 			bindArgumentsByName(numUnboundArgs);
 		}

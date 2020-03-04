@@ -6,6 +6,7 @@ import com.guoweizu.study.aop.annotation.LogOutput;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService implements IUserService{
@@ -35,6 +36,7 @@ public class UserService implements IUserService{
 		return "姓名:" + name;
 	}
 
+	@Transactional
 	@LogInputAndOutput
 	public String walk(String from, String to) {
 		return "from " + from + " to " + to;

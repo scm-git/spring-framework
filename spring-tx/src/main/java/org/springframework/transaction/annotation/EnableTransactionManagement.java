@@ -182,6 +182,9 @@ public @interface EnableTransactionManagement {
 	AdviceMode mode() default AdviceMode.PROXY;
 
 	/**
+	 * 默认事务advisor为最低级别，也就是最后一个执行的advisor，数字越大，执行顺序越靠后
+	 * 数字小的先执行
+	 *
 	 * Indicate the ordering of the execution of the transaction advisor
 	 * when multiple advices are applied at a specific joinpoint.
 	 * <p>The default is {@link Ordered#LOWEST_PRECEDENCE}.

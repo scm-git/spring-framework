@@ -45,7 +45,7 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 
 	/**
 	 * 查看如下调用链：注册当前这个类的BeanDefinition
-	 * refresh -> invokeBeanFactoryPostProcessors ->
+	 * refresh(第五步) -> invokeBeanFactoryPostProcessors ->
 	 * {@link org.springframework.context.support.PostProcessorRegistrationDelegate#invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory, List)} ->
 	 * invokeBeanDefinitionRegistryPostProcessors -> postProcessBeanDefinitionRegistry ->
 	 * processConfigBeanDefinitions (这个步骤会解析到@EnableTransactionManagement中selectImports引入的AutoProxyRegistray)

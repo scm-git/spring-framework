@@ -124,6 +124,17 @@ public abstract class AopConfigUtils {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
+
+			/**
+			 * 获取已注册的bean
+			 * 如果待注册的autoProxyCreator的index 大于 已注册的，则使用待注册的
+			 * 意思就是，spring容器中只有一个autoProxyCreator的bean，优先级定义在APC_PRIORITY_LIST属性中：
+			 * InfrastructureAdvisorAutoProxyCreator -- 1 如果仅仅启用spring事务管理就会注册这个creator
+			 * AspectJAwareAdvisorAutoProxyCreator  -- 2
+			 * AnnotationAwareAspectJAutoProxyCreator  -- 3 如果有这个，就不用前面两个： 如果@EnableAspectJAutoProxy就会注册这个creator
+			 *
+			 *
+			 */
 			BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
 			if (!cls.getName().equals(apcDefinition.getBeanClassName())) {
 				int currentPriority = findPriorityForClass(apcDefinition.getBeanClassName());

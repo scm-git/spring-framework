@@ -173,6 +173,9 @@ public abstract class AbstractAspectJAdvisorFactory implements AspectJAdvisorFac
 	 */
 	protected static class AspectJAnnotation<A extends Annotation> {
 
+		/**
+		 * 优先解析这6个注解上的pointcut属性，pointcut属性上没有值才解析value属性
+		 */
 		private static final String[] EXPRESSION_ATTRIBUTES = new String[] {"pointcut", "value"};
 
 		private static Map<Class<?>, AspectJAnnotationType> annotationTypeMap = new HashMap<>(8);
@@ -215,6 +218,13 @@ public abstract class AbstractAspectJAdvisorFactory implements AspectJAdvisorFac
 			throw new IllegalStateException("Unknown annotation type: " + annotation);
 		}
 
+		/**
+		 * 解析@Pointcut, @Before等注解上的表达式：
+		 * 优先解析这6个注解上的pointcut属性，pointcut属性上没有值才解析value属性
+		 *
+		 * @param annotation
+		 * @return
+		 */
 		private String resolveExpression(A annotation) {
 			for (String attributeName : EXPRESSION_ATTRIBUTES) {
 				Object val = AnnotationUtils.getValue(annotation, attributeName);

@@ -45,7 +45,8 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	private final AspectJAdvisorFactory advisorFactory;
 
 	/**
-	 * 缓存所有的切面bean的name，在refresh第十一步createBean时解析放入的
+	 * 缓存所有的切面bean(类上带有@Aspect注解的bean)的name，
+	 * 在refresh第十一步createBean时解析放入的
 	 */
 	@Nullable
 	private volatile List<String> aspectBeanNames;
@@ -84,6 +85,9 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 
 
 	/**
+	 * 此方法处理带有@Aspect注解的bean(bean可以是通过@Bean, @Component, @Import引入的)
+	 *
+	 *
 	 * Look for AspectJ-annotated aspect beans in the current bean factory,
 	 * and return to a list of Spring AOP Advisors representing them.
 	 * <p>Creates a Spring Advisor for each AspectJ advice method.
@@ -103,6 +107,10 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 					// 找到beanFactory中所有的组件
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
+					/**
+					 * 此处为什么需要循环所有的beanNames???
+					 * 每个bean初始化都需要进入这个逻辑，然后把所有beanName又拿出来处理一次，岂不是重复？？
+					 */
 					for (String beanName : beanNames) {
 						if (!isEligibleBean(beanName)) {
 							continue;
@@ -121,6 +129,13 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
+								/**
+								 * 由beanFactory和带有@Apsect的beanName构建，构造方法中会解析出一个AspectMetadata
+								 * AspectMetadata: 中有这个bean的Class(.class返回值)，beanName以及一个ajType
+								 * ajType是根据class推导出来的，里面包括PerClausePointcut
+								 * 但是不知道这些东西是干嘛的。。。
+								 *
+								 */
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
 								/**
@@ -150,7 +165,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						}
 					}
 					/**
-					 * 将所有的切面bean的name放入aspectBeanNames缓存中
+					 * 将所有的切面bean(带有@Aspect注解的bean)的name放入aspectBeanNames缓存中
 					 */
 					this.aspectBeanNames = aspectNames;
 					return advisors;

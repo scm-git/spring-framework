@@ -111,7 +111,16 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 
 
 	/**
-	 * 入参aspectInstanceFactory是根据beanFactory和beanName new出来的
+	 * 入参aspectInstanceFactory是根据beanFactory和beanName new出来的一个{@link BeanFactoryAspectInstanceFactory}
+	 * 包括以下属性：
+	 *     beanFactory
+	 *     beanName
+	 *     aspectMetadata 该属性在构造方法中解析出来,包括如下属性:
+	 *        bean的Class
+	 *        beanName
+	 *        ajType: 又在其ApsectMetadata构造方法中解析出来
+	 *
+	 *
 	 *
 	 * @param aspectInstanceFactory the aspect instance factory
 	 * (not the aspect instance itself in order to avoid eager instantiation)
@@ -236,6 +245,14 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	 *
 	 * @param candidateAdviceMethod the candidate advice method
 	 * @param aspectInstanceFactory the aspect instance factory
+	 *                              aspectInstanceFactory中包括如下属性
+	 *              	                beanFactory
+	 * 							        beanName
+	 * 									aspectMetadata 该属性在构造方法中解析出来,包括如下属性:
+	 *						         		aspectClass(bean的Class)
+	 *						         		aspectName(beanName)
+	 *						         		ajType: 又在其AspectMetadata构造方法中解析出来
+	 *
 	 * @param declarationOrderInAspect
 	 * @param aspectName the name of the aspect
 	 * @return
@@ -269,7 +286,16 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	private AspectJExpressionPointcut getPointcut(Method candidateAdviceMethod, Class<?> candidateAspectClass) {
 
 		/**
-		 * 获取方法上的@Before...这样的通知注解
+		 * 获取方法上的@Pointcut, @Before...这样的通知注解; 因为这些注解上都可以添加切入点表达式
+		 * 例如：
+		 * @Before(value="execution(public * *(..))")
+		 * @Pointcut(value="@annotation(com.guoweizu.study.aop.annotation.LogInput)")
+		 *
+		 * AspectJAnnotation中包含：
+		 * annotation本身
+		 * pointcut或者value解析出来的表达式值
+		 * args参数
+		 *
 		 */
 		AspectJAnnotation<?> aspectJAnnotation =
 				AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(candidateAdviceMethod);
@@ -321,6 +347,15 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 
 		AbstractAspectJAdvice springAdvice;
 
+		/**
+		 * 根据methods上的annotation类型构建不同类型的通知：
+		 * @Around -> AspectJAroundAdvice
+		 * @Before -> AspectJMethodBeforeAdvice
+		 * @After -> AspectJAfterAdvice
+		 * @AfterReturnig -> AspectJAfterReturningAdvice
+		 * @AfterThrowing -> AspectJAfterThrowingAdvice
+		 *
+		 */
 		switch (aspectJAnnotation.getAnnotationType()) {
 			case AtPointcut:
 				if (logger.isDebugEnabled()) {
@@ -363,10 +398,16 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		// Now to configure the advice...
 		springAdvice.setAspectName(aspectName);
 		springAdvice.setDeclarationOrder(declarationOrder);
+		/**
+		 * 解析参数名称，逗号分割多个参数
+		 */
 		String[] argNames = this.parameterNameDiscoverer.getParameterNames(candidateAdviceMethod);
 		if (argNames != null) {
 			springAdvice.setArgumentNamesFromStringArray(argNames);
 		}
+		/**
+		 * 绑定参数名称和值
+		 */
 		springAdvice.calculateArgumentBindings();
 
 		return springAdvice;
