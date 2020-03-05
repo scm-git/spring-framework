@@ -5,6 +5,9 @@ import org.springframework.context.annotation.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
@@ -23,6 +26,8 @@ import java.util.Set;
 @Import(value = Bar2Service.class)
 @EnableAspectJAutoProxy
 @EnableTransactionManagement
+@EnableAsync
+@EnableScheduling
 public class IocStudyConfig {
 
 	@Bean(name = "bean2")
@@ -53,7 +58,9 @@ public class IocStudyConfig {
 		return new JdbcTemplate(dataSource);
 	}
 
-	public Object bean1() {
-		return  new Object();
+	@Scheduled(fixedRate = 30000)
+	@Scheduled(fixedRate = 50000)
+	public void doScheduleTask() {
+		System.out.println("测试定时任务两个注解。。。。");
 	}
 }

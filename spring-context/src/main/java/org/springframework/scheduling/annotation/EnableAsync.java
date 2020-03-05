@@ -23,6 +23,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -161,6 +162,29 @@ import org.springframework.core.Ordered;
 @Documented
 @Import(AsyncConfigurationSelector.class)
 public @interface EnableAsync {
+	/**
+	 * 看类上的注释：
+	 * 1. 默认查找beanName为"taskExecutor"的{@link org.springframework.core.task.TaskExecutor}的bean，如果找不到
+	 *    则查找beanName为"taskExecutor"的{@link java.util.concurrent.Executor}的bean，如果也查找不到
+	 *    则spring默认使用{@link org.springframework.core.task.SimpleAsyncTaskExecutor}
+	 * 2. 被注解的方法如果是返回void，那么executor不会传递异常信息给调用者，仅仅是在日志中打印异常信息
+	 * 3. 如果想要自己定制以上信息：比如executor和异常；可以自己实现{@link AsyncConfigurer}，或者继承其子类{@link AsyncConfigurerSupport}
+	 *    不需要定制的直接返回null
+	 * 4. 如果通过第3步的方式定制，且想要将executor放入spring bean中，想要加@Bean注解，这样不用自己调用executor.initialize()方法 TODO
+	 * 5. 异步执行底层也是代理模式来实现的，所以如果想要其生效，不能再同一个类中调用(因为不会被拦截，跟事务是一个道理)，
+	 *
+	 * 注册流程：
+	 * 1. refresh第5不扫描所有@Import注解，并注册这些BeanDefinition, 此处的AsyncConfigurationSelector返回{@link ProxyAsyncConfiguration}，所以会注册这个组件
+	 * 2. ProxyAsyncConfiguration中有一个@Bean注解方法，所以又会扫描到该方法，并注册这个@Bean方法定义的组件：{@link AsyncAnnotationBeanPostProcessor}
+	 * 3. 查看第二步中的{@link AsyncAnnotationBeanPostProcessor}可以发现他是一个BeanFactoryAware的实现类 -- 所以在实例化bean时，在initializeBean方法中会调用其setBeanFactory方法
+	 *    这个实例化步骤在refresh第6步，会注册refresh第5步中扫描到的所有BeanPostProcessor, 此处就会调用getBean()方法实例化这些BeanPostProcessor， 所以这个创建在其他非BeanPostProcessor的bean之前创建
+	 *    其他的bean在refresh第11步创建
+	 * 4. 查看{@link AsyncAnnotationBeanPostProcessor#setBeanFactory(BeanFactory)}方法，可以看到，里面创建了AsyncAnnotationAdvisor -- 是一个Advisor；
+	 * 5. 所以refresh第11步初始化POJO bean的时候就能获取到这个前面注册的Advisor了
+	 * 6. 自己定制{@link AsyncConfigurer},  ProxyAsyncConfiguration这个类的父类AbstractAsyncConfiguration有一个@Autowired的setConfigurer方法，所以在实例化这个bean的时候
+	 *    在populateBean步骤就会调用此方法，该方法的入参是AspectConfigurer，所以会找到所有其子类的bean，并调用此方法，这样就完成了自己定制的executor和exceptionHandler设置
+	 *
+	 */
 
 	/**
 	 * Indicate the 'async' annotation type to be detected at either class
