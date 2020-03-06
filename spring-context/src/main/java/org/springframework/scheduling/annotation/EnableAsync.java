@@ -183,6 +183,12 @@ public @interface EnableAsync {
 	 * 5. 所以refresh第11步初始化POJO bean的时候就能获取到这个前面注册的Advisor了
 	 * 6. 自己定制{@link AsyncConfigurer},  ProxyAsyncConfiguration这个类的父类AbstractAsyncConfiguration有一个@Autowired的setConfigurer方法，所以在实例化这个bean的时候
 	 *    在populateBean步骤就会调用此方法，该方法的入参是AspectConfigurer，所以会找到所有其子类的bean，并调用此方法，这样就完成了自己定制的executor和exceptionHandler设置
+	 * 7. 第4步中创建的AsyncAnnotationAdvisor中的advice属性是一个{@link AnnotationAsyncExecutionInterceptor}其父类中的invoke方法中，会将method调用包装成一个Callable并提交给executor执行
+	 *    这个Callable会根据方法的返回值构建如下4种Callable:
+	 *    * CompletableFuture
+	 *    * ListenableFuture
+	 *    * Future
+	 *    * 普通Runnable
 	 *
 	 */
 
