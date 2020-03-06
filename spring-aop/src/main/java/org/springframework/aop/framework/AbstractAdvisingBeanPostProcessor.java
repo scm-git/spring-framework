@@ -82,6 +82,9 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 			}
 		}
 
+		/**
+		 * 如果有适合的bean，即该bean存在@Async注解的方法，就为这个bean创建代理对象
+		 */
 		if (isEligible(bean, beanName)) {
 			ProxyFactory proxyFactory = prepareProxyFactory(bean, beanName);
 			if (!proxyFactory.isProxyTargetClass()) {

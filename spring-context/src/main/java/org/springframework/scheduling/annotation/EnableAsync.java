@@ -179,11 +179,12 @@ public @interface EnableAsync {
 	 * 3. 查看第二步中的{@link AsyncAnnotationBeanPostProcessor}可以发现他是一个BeanFactoryAware的实现类 -- 所以在实例化bean时，在initializeBean方法中会调用其setBeanFactory方法
 	 *    这个实例化步骤在refresh第6步，会注册refresh第5步中扫描到的所有BeanPostProcessor, 此处就会调用getBean()方法实例化这些BeanPostProcessor， 所以这个创建在其他非BeanPostProcessor的bean之前创建
 	 *    其他的bean在refresh第11步创建
-	 * 4. 查看{@link AsyncAnnotationBeanPostProcessor#setBeanFactory(BeanFactory)}方法，可以看到，里面创建了AsyncAnnotationAdvisor -- 是一个Advisor；
-	 * 5. 所以refresh第11步初始化POJO bean的时候就能获取到这个前面注册的Advisor了
-	 * 6. 自己定制{@link AsyncConfigurer},  ProxyAsyncConfiguration这个类的父类AbstractAsyncConfiguration有一个@Autowired的setConfigurer方法，所以在实例化这个bean的时候
+	 * 4. 查看{@link AsyncAnnotationBeanPostProcessor#setBeanFactory(BeanFactory)}方法，可以看到，里面创建了AsyncAnnotationAdvisor -- 是一个Advisor（该步骤在创建bean的initializeBean中的invokeAware方法中执行）
+	 * 5. 第4步执行完成后，initializeBean中会继续调用{@link AsyncAnnotationBeanPostProcessor#postProcessAfterInitialization(Object, String)}方法，该方法会为适合的bean创建代理对象
+	 * 6. 所以refresh第11步初始化POJO bean的时候就能获取到这个前面注册的Advisor了
+	 * 7. 自己定制{@link AsyncConfigurer},  ProxyAsyncConfiguration这个类的父类AbstractAsyncConfiguration有一个@Autowired的setConfigurer方法，所以在实例化这个bean的时候
 	 *    在populateBean步骤就会调用此方法，该方法的入参是AspectConfigurer，所以会找到所有其子类的bean，并调用此方法，这样就完成了自己定制的executor和exceptionHandler设置
-	 * 7. 第4步中创建的AsyncAnnotationAdvisor中的advice属性是一个{@link AnnotationAsyncExecutionInterceptor}其父类中的invoke方法中，会将method调用包装成一个Callable并提交给executor执行
+	 * 8. 第4步中创建的AsyncAnnotationAdvisor中的advice属性是一个{@link AnnotationAsyncExecutionInterceptor}其父类中的invoke方法中，会将method调用包装成一个Callable并提交给executor执行
 	 *    这个Callable会根据方法的返回值构建如下4种Callable:
 	 *    * CompletableFuture
 	 *    * ListenableFuture
