@@ -79,6 +79,12 @@ public class CachingConfigurationSelector extends AdviceModeImportSelector<Enabl
 	}
 
 	/**
+	 * 1. AutoProxyRegistrar:
+	 * 2. ProxyCachingConfiguration中注册一下三个bean:
+	 *    BeanFactoryCacheOperationSourceAdvisor， 增强器，已作为bean注册到容器中
+	 *    CacheInterceptor 拦截器，注册为bean放入容器中
+	 *    CacheOperationSource  用来查找@Cache注解的，也就是查找切入点pointcut
+	 *
 	 * Return the imports to use if the {@link AdviceMode} is set to {@link AdviceMode#PROXY}.
 	 * <p>Take care of adding the necessary JSR-107 import if it is available.
 	 */

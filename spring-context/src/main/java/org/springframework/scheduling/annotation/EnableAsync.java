@@ -174,7 +174,7 @@ public @interface EnableAsync {
 	 * 5. 异步执行底层也是代理模式来实现的，所以如果想要其生效，不能再同一个类中调用(因为不会被拦截，跟事务是一个道理)，
 	 *
 	 * 注册流程：
-	 * 1. refresh第5不扫描所有@Import注解，并注册这些BeanDefinition, 此处的AsyncConfigurationSelector返回{@link ProxyAsyncConfiguration}，所以会注册这个组件
+	 * 1. refresh第5步扫描所有@Import注解，并注册这些BeanDefinition, 此处的AsyncConfigurationSelector返回{@link ProxyAsyncConfiguration}，所以会注册这个组件
 	 * 2. ProxyAsyncConfiguration中有一个@Bean注解方法，所以又会扫描到该方法，并注册这个@Bean方法定义的组件：{@link AsyncAnnotationBeanPostProcessor}
 	 * 3. 查看第二步中的{@link AsyncAnnotationBeanPostProcessor}可以发现他是一个BeanFactoryAware的实现类 -- 所以在实例化bean时，在initializeBean方法中会调用其setBeanFactory方法
 	 *    这个实例化步骤在refresh第6步，会注册refresh第5步中扫描到的所有BeanPostProcessor, 此处就会调用getBean()方法实例化这些BeanPostProcessor， 所以这个创建在其他非BeanPostProcessor的bean之前创建
@@ -190,6 +190,32 @@ public @interface EnableAsync {
 	 *    * ListenableFuture
 	 *    * Future
 	 *    * 普通Runnable
+	 *
+	 *
+	 * AOP的嵌入流程：
+	 * 1. {@link org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation(Class, String)}--  找到已注册的advisor或者根据@Aspect构建出advisor 并缓存起来
+	 * 2. {@link org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference(Object, String)} -- 为提前暴露对象创建代理(如果有需要的话)
+	 * 3. {@link org.springframework.beans.factory.config.BeanPostProcessor#postProcessAfterInitialization(Object, String)} -- 判断bean是否需要被拦截处理(wrapInfNecessary), 如果需要就在此处为其创建代理对象
+	 *
+	 * AOP的必备元素：
+	 * 1. Advisor(advice + pointcut + 被拦截方法元数据), Advisor有两处来源：1. 直接注册成为bean， 2. 由@Aspect构建而来
+	 *    例如以下这些Advisor, 直接注册为bean的advisor，其中也包含了advice和pointcut
+	 *    1.1 EnableTransactionManagement(数据库事务) -- BeanFactoryTransactionAttributeSourceAdvisor; 注册类: ProxyTransactionManagementConfiguration
+	 *        advice: TransactionInterceptor -- 事务处理通知
+	 *        pointcut:  TransactionAttributeSource -- 切入点表达式解析器： 解析@Transactional注解
+	 *    1.2 EnableCaching(缓存) -- BeanFactoryCacheOperationSourceAdvisor; 注册类： ProxyCachingConfiguration
+	 *        advice: CacheInterceptor -- 缓存处理通知
+	 *        pointcut: CacheOperationSource -- 切入点表达式解析器： 解析@Cache注解
+	 *    1.3 EnableAsync(异步) -- AsyncAnnotationAdvisor
+	 *        advice: AnnotationAsyncExecutionInterceptor  -- 异步执行通知
+	 *        pointcut: AnnotationMatchingPointcut -- 异步执行方法切入点
+	 *    其中事务和缓存的AOP实现套路几乎完全一样，都是在一个配置类里面注册需要的三大组件(advisor, advice, pointcut解析器)， 详情参看上面两个注册类
+	 *    但是EnableAsync的实现套路稍微有点不同： 这个是在其后置处理器中去注册的（advisor, advice, pointcut解析器），详细查看@EnableAsync中的注册流程
+	 *
+	 * 2. BeanPostProcessor -- 从上面三个嵌入流程可以看出，必须要有一个对应的BeanPostProcessor才能将AOP流程嵌入到spring容器bean的创建流程中，才能创建出代理
+	 *    例如如下的BeanPostProcessor(对应上面的Advisor)
+	 *	  2.1 事务和缓存都是通过同一个BeanPostProcessor嵌入到bean创建流程并完成代理创建
+	 *	  2.2 EnableAsync -- 是注册了：AsyncAnnotationBeanPostProcessor
 	 *
 	 */
 

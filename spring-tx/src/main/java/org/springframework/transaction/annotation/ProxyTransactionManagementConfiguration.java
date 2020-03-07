@@ -66,8 +66,11 @@ public class ProxyTransactionManagementConfiguration extends AbstractTransaction
 	}
 
 	/**
+	 *
 	 * AnnotationTransactionAttributeSource中包括TransactionAnnotationParser，用于解析@Transactional注解
 	 * 并将解析结果放入TransactionAttribute对象
+	 * 也就是切入点表达式，通过这个来查找bean的切入点方法
+	 *
 	 *
 	 * @return
 	 */
@@ -81,6 +84,7 @@ public class ProxyTransactionManagementConfiguration extends AbstractTransaction
 	 * 事务拦截器：
 	 * 动态代理调用方法时，就会通过拦截器去拦截方法
 	 * 然后将方法放入拦截器中的{@link TransactionInterceptor#invokeWithinTransaction(Method, Class, TransactionAspectSupport.InvocationCallback)}中执行
+	 * 也就是advice
 	 *
 	 * @param transactionAttributeSource
 	 * @return

@@ -39,6 +39,11 @@ import org.springframework.context.annotation.Role;
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 public class ProxyCachingConfiguration extends AbstractCachingConfiguration {
 
+	/**
+	 * @EnableCache的advisor 套路和@Transactional 几乎完全一样， 里面也有advice+pointcut的解析器
+	 *
+	 * @return
+	 */
 	@Bean(name = CacheManagementConfigUtils.CACHE_ADVISOR_BEAN_NAME)
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public BeanFactoryCacheOperationSourceAdvisor cacheAdvisor() {
@@ -51,12 +56,22 @@ public class ProxyCachingConfiguration extends AbstractCachingConfiguration {
 		return advisor;
 	}
 
+	/**
+	 * Cache的切入点解析器：解析@Cache注解
+	 *
+	 * @return
+	 */
 	@Bean
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public CacheOperationSource cacheOperationSource() {
 		return new AnnotationCacheOperationSource();
 	}
 
+	/**
+	 * 对目标方法执行的通知逻辑
+	 *
+	 * @return
+	 */
 	@Bean
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public CacheInterceptor cacheInterceptor() {
