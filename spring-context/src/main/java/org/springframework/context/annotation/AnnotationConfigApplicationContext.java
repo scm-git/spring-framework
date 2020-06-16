@@ -73,11 +73,15 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 
 	private final AnnotatedBeanDefinitionReader reader;
 
+	/**
+	 * scanner似乎只有使用AnnotationConfigApplicationContext(String... basePackages)时才会用到，其他时候不会用
+	 * 但是reader和scanner都有final关键字，所以需要在默认构造器中初始化值
+	 */
 	private final ClassPathBeanDefinitionScanner scanner;
 
 
 	/**
-	 * 默认构造方法：
+	 * 默认构造方法：总共有4个构造器，其他三个都会调用这个默认构造器，即都会初始化reader和scanner
 	 * 1. 实例化reader属性(AnnotatedBeanDefinitionReader)，并将this传入AnnotatedBeanDefinitionReader(this),赋值给reader的registry成员变量，
 	 *    reader持有了AnnotationConfigApplicationContext对象，能调用任何this可以调用的方法
 	 *    this的父类GenericApplicationContext实现了BeanDefinitionRegistry，并且实现了registerBeanDefinition()等方法
@@ -166,7 +170,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		// 注册componentClass, 调用reader.registry方法，reader已经在this()中初始化
 		// 调用AnnotatedBeanDefinitionReader构造方法初始化reader时已经注入了6个内置的beanDefinition,
 		// 那6个beanDefinition是在构造器中调用AnnotationConfigUtils.registerAnnotationConfigProcessors方法注入的
-		// 此处是调用reader.registry方法，registry方法中会判断条件，是否需要跳过
+		// 此处是调用reader.register方法，register方法中会判断条件，是否需要跳过
 		// 启动类上面不需要任何注解就可以被注册到beanFactory中，因为此处调用了register方法，
 		// 而其他组件(@Component，或者@Bean等)都是在refresh()步骤中扫描进去
 		register(componentClasses);

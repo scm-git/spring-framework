@@ -80,7 +80,7 @@ public class CachingConfigurationSelector extends AdviceModeImportSelector<Enabl
 
 	/**
 	 * 1. AutoProxyRegistrar:
-	 * 2. ProxyCachingConfiguration中注册一下三个bean:
+	 * 2. ProxyCachingConfiguration中注册以下三个bean:
 	 *    BeanFactoryCacheOperationSourceAdvisor， 增强器，已作为bean注册到容器中
 	 *    CacheInterceptor 拦截器，注册为bean放入容器中
 	 *    CacheOperationSource  用来查找@Cache注解的，也就是查找切入点pointcut

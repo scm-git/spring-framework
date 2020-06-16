@@ -101,7 +101,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * 	2. 有@ManagedBean注解的, jsr-250
 	 * 	3. 有@Named(java.inject.Named)注解的, jsr-330
 	 *
-	 * 另外满足了includeFilter之后，还需要继续判断conditionEvaluator，conditionEvaluator根据@Conditional注解来觉得是否满足条件注册BeanDefinition
+	 * 另外满足了includeFilter之后，还需要继续判断conditionEvaluator，conditionEvaluator根据@Conditional注解来决定是否满足条件注册BeanDefinition
 	 */
 	private final List<TypeFilter> includeFilters = new LinkedList<>();
 

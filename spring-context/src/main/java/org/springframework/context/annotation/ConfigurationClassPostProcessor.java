@@ -68,7 +68,7 @@ import org.springframework.util.ClassUtils;
 /**
  * =======非常重要的一个类======
  * 该类是BeanDefinitionRegistryPostProcessor的子类，在AnnotationConfigApplicationText初始化reader时就会注册这个类的BeanDefinition到beanFactory.beanDefinitionMap中
- * 然后在refresh的第五步调用invokeBeanFactoryPostProcessor时就调用该类postProcessBeanDefinitionRegistry方法来扫描并加重所有组件的BeanDefinition
+ * 然后在refresh的第五步调用invokeBeanFactoryPostProcessor时就调用该类postProcessBeanDefinitionRegistry方法来扫描并加载所有组件的BeanDefinition
  *
  * 应用中的组件的BeanDefinition就是通过这个类的postProcessBeanDefinitionRegistry方法加载进来的
  * 启动时后处理@Configuration注解的类，@Configuration注解的类会被解析为一个ConfigurationClass实例

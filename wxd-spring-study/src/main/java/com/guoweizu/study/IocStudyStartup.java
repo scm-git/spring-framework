@@ -11,6 +11,7 @@ public class IocStudyStartup {
 
 
 	public static void main(String[] args) {
+		// AnnotationConfigApplicationContext annotationConfigApplicationContext1 = new AnnotationConfigApplicationContext("com.guoweizu", "com.other");
 		AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(IocStudyConfig.class);
 
 		String[] beanDefinitionNames = annotationConfigApplicationContext.getBeanDefinitionNames();
