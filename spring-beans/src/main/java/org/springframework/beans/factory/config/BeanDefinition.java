@@ -58,6 +58,10 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 
 
 	/**
+	 * ROLE的值越小，优先级越高，注册bean定义时，如果beanName相同，ROLE小的覆盖ROLE大的BeanDefinition
+	 * 用户自己定义的Bean的默认ROLE就是ROLE_APPLICATION，而Spring框架内部BeanDefinition的ROLE通常是ROLE_INFRASTRUCTURE
+	 * 因此同名情况下，用户的会覆盖框架的bean定义
+	 *
 	 * Role hint indicating that a {@code BeanDefinition} is a major part
 	 * of the application. Typically corresponds to a user-defined bean.
 	 */

@@ -55,7 +55,7 @@ public class AnnotatedBeanDefinitionReader {
 	private ScopeMetadataResolver scopeMetadataResolver = new AnnotationScopeMetadataResolver();
 
 	/**
-	 * 用于判断bean实现需要注册，会根据environment判断
+	 * 用于判断bean是否需要注册，会根据environment判断
 	 */
 	private ConditionEvaluator conditionEvaluator;
 
@@ -87,6 +87,7 @@ public class AnnotatedBeanDefinitionReader {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
+		// conditionContext中引用了registry, beanFactory, environment, resourceLoader, classLoader
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}

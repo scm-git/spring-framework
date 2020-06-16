@@ -97,7 +97,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 *    2.1 默认扫描：
 	 *      @Component (@Controller, @Service, @Repository都是其变种, spring默认的方式)
 	 *      @ManagedBean(javax.annotation.ManagedBean) (jsr-250, 如果没有引入包，会自动跳过)
-	 *      @Named(javax.inject.Named) （jsr-330, 如果没有引入包，会自多个跳过）
+	 *      @Named(javax.inject.Named) （jsr-330, 如果没有引入包，会自动跳过）
 	 *    2.2 会根据registry获取environment
 	 *    2.3 初始化resourcePatternResolver(ResourceLoader), this的父类的ResourceLoader，因此scanner的
 	 *    2.4 初始化beanNameGenerator=new AnnotationBeanNameGenerator()，用于生成bean名称

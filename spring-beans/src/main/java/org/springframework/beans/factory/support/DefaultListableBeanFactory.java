@@ -147,7 +147,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	private String serializationId;
 
 	/**
-	 * 是否可以覆盖，当注册beanDefinition时，如果发现beanDefnitionMap中已经存，则判断该字段，如果为true，表示可以覆盖；否则不覆盖，并抛出BeanDefinitionOverrideException异常
+	 * 是否可以覆盖，当注册beanDefinition时，如果发现beanDefinitionMap中已经存，则判断该字段，如果为true，表示可以覆盖；否则不覆盖，并抛出BeanDefinitionOverrideException异常
 	 * Whether to allow re-registration of a different definition with the same name.
 	 * */
 	private boolean allowBeanDefinitionOverriding = true;
