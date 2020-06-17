@@ -1,6 +1,7 @@
 package com.guoweizu.study;
 
 import com.test.Bar2Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -22,13 +23,16 @@ import java.util.Set;
  */
 
 @ComponentScan(basePackages = "com.guoweizu")
-@Configuration
+//@Configuration
 @Import(value = Bar2Service.class)
 @EnableAspectJAutoProxy
 @EnableTransactionManagement
 @EnableAsync
 @EnableScheduling
 public class IocStudyConfig {
+
+	@Value("s1.test")
+	String s1;
 
 	@Bean(name = "bean2")
 	public Set<String> set() {

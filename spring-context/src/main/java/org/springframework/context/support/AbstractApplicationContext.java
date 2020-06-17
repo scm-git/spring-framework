@@ -542,7 +542,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			/**
 			 * 刷新并获取beanFactory
-			 * refreshBeanFactory只能调用一次，后面的调用会抛出IllegalStateException异常;
+			 * refreshBeanFactory只能调用一次，后面的调用会抛出IllegalStateException异常;也就是说refresh()只能被调用一次
 			 * 将refreshed设置为true, this.refreshed.compareAndSet(false, true) 会根据这个返回值判断是否为第一次refresh;
 			 * 刷新后设置beanFactory的serializationId为当前context的对象id:
 			 * private String id = ObjectUtils.identityToString(this);

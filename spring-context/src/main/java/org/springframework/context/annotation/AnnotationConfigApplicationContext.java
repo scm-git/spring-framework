@@ -167,7 +167,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
 		// 调用默认构造， 具体逻辑详见构造方法，初始化了很多重要的属性
 		this();
-		// 注册componentClass, 调用reader.registry方法，reader已经在this()中初始化
+		// 注册componentClass, 调用reader.register方法，reader已经在this()中初始化
 		// 调用AnnotatedBeanDefinitionReader构造方法初始化reader时已经注入了6个内置的beanDefinition,
 		// 那6个beanDefinition是在构造器中调用AnnotationConfigUtils.registerAnnotationConfigProcessors方法注入的
 		// 此处是调用reader.register方法，register方法中会判断条件，是否需要跳过
