@@ -252,6 +252,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		this.registriesPostProcessed.add(registryId);
 
 		// 校验之后，调用真正的后处理方法，加载
+		/**
+		 * 此步骤扫描完BeanDefinition之后，会注册一个BPP到beanFactory的单例池中:{@link org.springframework.context.annotation.ConfigurationClassParser.ImportStack}
+		 */
 		processConfigBeanDefinitions(registry);
 	}
 

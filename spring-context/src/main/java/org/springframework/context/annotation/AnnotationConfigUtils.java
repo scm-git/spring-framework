@@ -138,16 +138,17 @@ public abstract class AnnotationConfigUtils {
 	}
 
 	/**
-	 * 注册spring框架内置的6个BeanDefinition: 通过RootBeanDefinition类型注册，其中3个BeanFactoryPostProcessor, 2个BeanPotProcessor, 1个EventListenerFactory
+	 * 注册spring框架内置的6个BeanDefinition: 通过RootBeanDefinition类型注册，其中2个BeanFactoryPostProcessor, 3个BeanPotProcessor, 1个EventListenerFactory
 	 *
 	 * 1. 以下2个是BeanFactoryPostProcessor, 在AbstractApplicationContext.refresh的第5步会用到
 	 * @see org.springframework.context.annotation.ConfigurationClassPostProcessor: 扫描并加载应用中的组件(@Component), 是一个BeanDefinitionRegistryPostProcessor
 	 * @see org.springframework.context.event.EventListenerMethodProcessor
 	 *
 	 * 2. 以下3个是BeanPostProcessor, 在refresh的第6步会会用到，其中JSR-250,JPA需要在应用中能加载支持的类才会注册
-	 * @see org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor (必定会注册)
-	 * @see org.springframework.context.annotation.CommonAnnotationBeanPostProcessor (check JSR-250 support)
+	 * @see org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor (必定会注册) -- 处理@Autworied和@Inject注解
+	 * @see org.springframework.context.annotation.CommonAnnotationBeanPostProcessor (check JSR-250 support)  -- 处理@Resource注解
 	 * @see org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor (check JPA support)
+	 * 前面两个都是用于处理属性注入的
 	 *
 	 * 3. 下面这个是EventListenerFactory
 	 * @see org.springframework.context.event.DefaultEventListenerFactory

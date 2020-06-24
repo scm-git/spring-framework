@@ -420,8 +420,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					//
 					/**
 					 * 创建bean,并加入单例缓冲池, 此处的逻辑非常复杂，详见方法上的注释说明
-					 * getSingleton在其子类中实现：
-					 * {@link AbstractAutowireCapableBeanFactory#getSingleton(String, ObjectFactory)}
+					 * getSingleton在其父类中实现：
+					 * {@link DefaultSingletonBeanRegistry#getSingleton(String, ObjectFactory)}
 					 */
  					sharedInstance = getSingleton(beanName, () -> {
 						try {
@@ -484,7 +484,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			catch (BeansException ex) {
 				/**
 				 * 3.8
-				 * 创建bean抛出异常，说明创建失败，将创建表示从alreadyCreated集合中删除，
+				 * 创建bean抛出异常，说明创建失败，将创建标识从alreadyCreated集合中删除，
 				 * 进入创建流程时，会向该集合中放入正在创建的bean名称: beanName;
 				 * 创建成功就不会删除，让beanName留在alreadyCreated(是一个Set)集合中
 				 */
@@ -1307,7 +1307,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 	/**
 	 * 1. 先去掉factoryBean的前缀(&)
-	 * 2. 循环查找aliasMap(别名 -> 真名); 知道找到真名；可能有别名的别名存在
+	 * 2. 循环查找aliasMap(别名 -> 真名); 直到找到真名；可能有别名的别名存在
 	 *
 	 * Return the bean name, stripping out the factory dereference prefix if necessary,
 	 * and resolving aliases to canonical names.

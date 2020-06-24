@@ -120,8 +120,8 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
 
 			// BeanDefinitionRegistryPostProcessor是BeanFactoryPostProcessor子类，将他们分组
-			// 将属于子类BeanDefinitionRegistryPostProcessor的放入registryProcessors列表中
-			// 其他的放入regularPostProcessors列表中
+			// 将属于子类BeanDefinitionRegistryPostProcessor的调用其postProcessBeanDefinitionRegistry方法，并放入registryProcessors列表中
+			// 其他的普通BFPP放入regularPostProcessors列表中，不调用其方法（会放在后面一起调用）
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
 					BeanDefinitionRegistryPostProcessor registryProcessor =
@@ -148,7 +148,7 @@ final class PostProcessorRegistrationDelegate {
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
-					// 添加到当前将要处理的postProcessor, bean还没有实例化，为什么此处可以getBean()? TODO
+					// 添加到当前将要处理的postProcessor, bean还没有实例化，为什么此处可以getBean()?
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
 					// 添加到已处理列表
 					processedBeans.add(ppName);
@@ -157,7 +157,12 @@ final class PostProcessorRegistrationDelegate {
 			// 排序
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			registryProcessors.addAll(currentRegistryProcessors);
-			// 调用该方法进入真正的处理逻辑，只传入了本次筛选出的BeanFactoryPostProcessor(实现了PriorityOrdered接口的)
+			/**
+			 * 调用该方法进入真正的处理逻辑，只传入了本次筛选出的BeanFactoryPostProcessor(实现了PriorityOrdered接口的)
+			 *
+			 * 此处会调用{@link org.springframework.context.annotation.ConfigurationClassPostProcessor#postProcessBeanDefinitionRegistry(BeanDefinitionRegistry)}
+			 * ConfigurationClassPostProcessor就是在AnnotationConfigApplicationContext的默认构造方法中注册的一个BDRPP
+			 */
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			// 清理，准备处理Ordered类型的
 			currentRegistryProcessors.clear();
