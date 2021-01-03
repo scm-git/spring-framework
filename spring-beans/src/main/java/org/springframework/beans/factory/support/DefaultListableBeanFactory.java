@@ -926,6 +926,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 
 		// 触发bean的SmartInitializingSingleton.afterSingletonsInstantiated()方法
+		// Ribbon的LoadBalanceClient就是在此步骤注入的；因此这里就会有一个问题，如果你在微服务中在InitializingBean阶段使用RestTemplate调用其他微服务时，就会出错
+		// 因为InitializingBean是在createBean阶段中，那个阶段中的restTemplate还没有注入LoadBalanceClient，不能通过微服务名来调用对应的微服务接口
 		// Trigger post-initialization callback for all applicable beans...
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);
