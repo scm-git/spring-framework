@@ -416,3 +416,7 @@ configure(rootProject) {
 		}
 	}
 }
+
+dependencies {
+    implementation 'org.junit.jupiter:junit-jupiter'
+}
