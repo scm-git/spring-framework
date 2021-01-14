@@ -333,14 +333,16 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			return Integer.compare(i1, i2);
 		});
 
-		// 这段不是太明白 TODO
+		// 下面这段逻辑是 用于配置用户指定的bean名称生成器
+		// 如果用戶沒有指定，則使用spring默认的bean名称生成器
 		// Detect any custom bean name generation strategy supplied through the enclosing application context
 		SingletonBeanRegistry sbr = null;
 		if (registry instanceof SingletonBeanRegistry) {
 			sbr = (SingletonBeanRegistry) registry;
 			if (!this.localBeanNameGeneratorSet) {
-				// 不知道什么时候注册的CONFIGURATION_BEAN_NAME_GENERATOR
-				// 启动时拿不到sbr中拿不到generator, 因此为null
+				// CONFIGURATION_BEAN_NAME_GENERATOR只是一个beanName, 用户可以使用这个beanName来指定自己的BeanNameGenerator，用于自定义bean的名称生成器
+				// 可以通过@ComponentScan的nameGenerator属性指定
+				// 如果用户没有指定，则使用spring默认的
 				BeanNameGenerator generator = (BeanNameGenerator) sbr.getSingleton(
 						AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR);
 				if (generator != null) {
@@ -350,7 +352,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			}
 		}
 
-		// 不确定这个environment何时初始化的？debug时，这个environment已经有值了 TODO
+		// 不确定这个environment何时初始化的？debug时，这个environment已经有值了 TODO -- getBean的时候
 		if (this.environment == null) {
 			this.environment = new StandardEnvironment();
 		}
@@ -362,7 +364,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
 
 		// 将上一步筛选出来的待解析的beanDefinitionHolder放入新的集合
+		// 下面的do while循环每次解析candidates set集合，每次解析完成后，都会clear candidates集合
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
+		// alreadyParsed用于存放已解析的ConfigurationClass，
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
 			// 调用解析方法

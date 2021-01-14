@@ -148,7 +148,13 @@ final class PostProcessorRegistrationDelegate {
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
-					// 添加到当前将要处理的postProcessor, bean还没有实例化，为什么此处可以getBean()?
+					/**
+					 * 添加到当前将要处理的postProcessor, bean还没有实例化，为什么此处可以getBean()? --
+					 * 因为getBean的过程就是bean的创建过程：如果bean已存在则从单例缓存池中获取，如果不存在则创建bean,并且放入单例缓存池(scope为singleton的情况)
+					 *
+					 * 此处就会创建{@link org.springframework.context.annotation.ConfigurationClassPostProcessor}的实例(ApplicationContext构造方法中注册的6个BeanDefinition中的一个)
+					 * 创建了实例之后，就能调用其postProcessBeanDefinitionRegistry方法
+					 */
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
 					// 添加到已处理列表
 					processedBeans.add(ppName);

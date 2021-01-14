@@ -76,7 +76,7 @@ abstract class ConfigurationClassUtils {
 	/**
 	 * 1. 如果beanDefinition属于AnnotatedBeanDefinition，取出metadata，
 	 * 2. 如果beanDefinition属于AbstractBeanDefinition,
-	 *    并且不是BeanFactoryPostProcessor/BeanPostProcessor/AopInfrastructureBean/EventListenerFactory这几种类型或其子类型，取出metadata，
+	 *    并且beanDefinition的beanClass不是BeanFactoryPostProcessor/BeanPostProcessor/AopInfrastructureBean/EventListenerFactory这几种类型或其子类型，取出metadata，
 	 * 3. 不属于上面两类，尝试获取annotation的metadata，如果能获取到，则满足条件
 	 *
 	 * 满足上面三个条件后，继续判断下面两种情况：
